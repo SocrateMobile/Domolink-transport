@@ -139,8 +139,20 @@ class DomolinkTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class DomolinkTransportOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for DomoLink-Transport."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self.config_entry = config_entry
+    def __init__(self, config_entry: config_entries.ConfigEntry | None = None) -> None:
+        """Initialize options flow without conflicting with Home Assistant base property."""
+        self._config_entry = config_entry
+
+    @property
+    def config_entry(self) -> config_entries.ConfigEntry:
+        """Return config entry, prioritizing HA base property with fallback."""
+        try:
+            entry = super().config_entry
+            if entry is not None:
+                return entry
+        except (AttributeError, KeyError, Exception):
+            pass
+        return self._config_entry
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Manage options."""
