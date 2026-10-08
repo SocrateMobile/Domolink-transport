@@ -303,6 +303,8 @@ class DomolinkTransportApiClient:
                 is_on_time = True
 
             return {
+                "departure_datetime": dep_dt,
+                "arrival_datetime": arr_dt,
                 "departure_time": dep_dt.isoformat(),
                 "arrival_time": arr_dt.isoformat(),
                 "departure_time_str": dep_dt.strftime("%H:%M"),

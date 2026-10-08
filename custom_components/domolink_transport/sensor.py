@@ -1,6 +1,7 @@
 """Sensor platform for DomoLink-Transport with native and legacy entities."""
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -16,6 +17,22 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, NAME, VERSION
 from .coordinator import DomolinkTransportCoordinator
+
+
+def _parse_timestamp(val: Any) -> datetime | None:
+    """Parse a datetime object or ISO string into a timezone-aware datetime."""
+    dt: datetime | None = None
+    if isinstance(val, datetime):
+        dt = val
+    elif isinstance(val, str) and val:
+        try:
+            dt = datetime.fromisoformat(val)
+        except Exception:
+            return None
+    if dt is not None and dt.tzinfo is None:
+        from .api import TZ_PARIS
+        dt = dt.replace(tzinfo=TZ_PARIS)
+    return dt
 
 
 async def async_setup_entry(
@@ -123,10 +140,11 @@ class DomolinkJourneySensor(DomolinkTransportBaseSensor):
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
 
     @property
-    def native_value(self) -> str | None:
+    def native_value(self) -> datetime | None:
         journeys = self.coordinator.data.get(self._route_key, [])
         if len(journeys) > self._index:
-            return journeys[self._index].get("departure_time")
+            j = journeys[self._index]
+            return _parse_timestamp(j.get("departure_datetime") or j.get("departure_time"))
         return None
 
     @property
@@ -135,6 +153,8 @@ class DomolinkJourneySensor(DomolinkTransportBaseSensor):
         if len(journeys) > self._index:
             j = journeys[self._index]
             return {
+                "departure_time": j.get("departure_time"),
+                "departure_time_str": j.get("departure_time_str"),
                 "minutes_remaining": j.get("minutes_remaining"),
                 "platform": j.get("platform"),
                 "voie": j.get("platform"),
@@ -144,6 +164,7 @@ class DomolinkJourneySensor(DomolinkTransportBaseSensor):
                 "mission": j.get("headsign"),
                 "duration_minutes": j.get("duration_minutes"),
                 "arrival_time": j.get("arrival_time"),
+                "arrival_time_str": j.get("arrival_time_str"),
                 "is_on_time": j.get("is_on_time"),
                 "delay_minutes": j.get("delay_minutes"),
                 "status_label": j.get("status_label"),
@@ -164,10 +185,12 @@ class DomolinkLastReturnSensor(DomolinkTransportBaseSensor):
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
 
     @property
-    def native_value(self) -> str | None:
+    def native_value(self) -> datetime | None:
         key = "last_return_b_to_a" if self._route_key == "b_to_a" else "last_return_c_to_a"
         j = self.coordinator.data.get(key)
-        return j.get("departure_time") if j else None
+        if j:
+            return _parse_timestamp(j.get("departure_datetime") or j.get("departure_time"))
+        return None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -302,10 +325,11 @@ class LegacyJourneyDepartureSensor(DomolinkTransportBaseSensor):
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
 
     @property
-    def native_value(self) -> str | None:
+    def native_value(self) -> datetime | None:
         journeys = self.coordinator.data.get("a_to_b", [])
         if len(journeys) > self._index:
-            return journeys[self._index].get("departure_time")
+            j = journeys[self._index]
+            return _parse_timestamp(j.get("departure_datetime") or j.get("departure_time"))
         return None
 
 
@@ -321,10 +345,11 @@ class LegacyJourneyArrivalSensor(DomolinkTransportBaseSensor):
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
 
     @property
-    def native_value(self) -> str | None:
+    def native_value(self) -> datetime | None:
         journeys = self.coordinator.data.get("a_to_b", [])
         if len(journeys) > self._index:
-            return journeys[self._index].get("arrival_time")
+            j = journeys[self._index]
+            return _parse_timestamp(j.get("arrival_datetime") or j.get("arrival_time"))
         return None
 
 
