@@ -1,0 +1,3 @@
+refresh:
+  name: Actualiser les données
+  description: Force l'actualisation immédiate des horaires et du trafic SNCF / IDFM.
