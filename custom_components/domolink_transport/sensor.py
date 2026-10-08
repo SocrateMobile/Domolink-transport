@@ -36,7 +36,15 @@ async def async_setup_entry(
     for idx in range(3):
         entities.append(DomolinkJourneySensor(coordinator, entry, "a_to_c", idx))
 
-    # 3. Derniers retours de nuit (B -> A et C -> A)
+    # 3. Capteurs modernes DomoLink pour le retour B -> A (3 prochains retours)
+    for idx in range(3):
+        entities.append(DomolinkJourneySensor(coordinator, entry, "b_to_a", idx))
+
+    # 4. Capteurs modernes DomoLink pour le retour C -> A (3 prochains retours)
+    for idx in range(3):
+        entities.append(DomolinkJourneySensor(coordinator, entry, "c_to_a", idx))
+
+    # 5. Derniers retours de nuit (B -> A et C -> A)
     entities.append(DomolinkLastReturnSensor(coordinator, entry, "b_to_a"))
     entities.append(DomolinkLastReturnSensor(coordinator, entry, "c_to_a"))
 
@@ -97,8 +105,20 @@ class DomolinkJourneySensor(DomolinkTransportBaseSensor):
         super().__init__(coordinator, entry)
         self._route_key = route_key
         self._index = index
-        dest_name = coordinator.station_b_name if route_key == "a_to_b" else coordinator.station_c_name
-        self._attr_name = f"DomoLink Train {coordinator.station_a_name} - {dest_name} ({index + 1})"
+        if route_key == "a_to_b":
+            orig_name = coordinator.station_a_name
+            dest_name = coordinator.station_b_name
+        elif route_key == "a_to_c":
+            orig_name = coordinator.station_a_name
+            dest_name = coordinator.station_c_name
+        elif route_key == "b_to_a":
+            orig_name = coordinator.station_b_name
+            dest_name = coordinator.station_a_name
+        else:  # c_to_a
+            orig_name = coordinator.station_c_name
+            dest_name = coordinator.station_a_name
+
+        self._attr_name = f"DomoLink Train {orig_name} - {dest_name} ({index + 1})"
         self._attr_unique_id = f"domolink_transport_{route_key}_{index + 1}_{entry.entry_id}"
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
 

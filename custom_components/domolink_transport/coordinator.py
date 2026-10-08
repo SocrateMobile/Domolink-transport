@@ -87,16 +87,19 @@ class DomolinkTransportCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # 2. Trajets A -> C (3 à 5 prochains départs)
             a_to_c = await self.api.async_get_next_journeys(self.station_a_id, self.station_c_id, count=5)
 
-            # 3. Trajets retours B -> A (pour openhasp et panneau)
+            # 3. Trajets retours B -> A (3 prochains départs)
             b_to_a = await self.api.async_get_next_journeys(self.station_b_id, self.station_a_id, count=3)
 
-            # 4. Dernier train de nuit B -> A (entre 22h et 03h30)
+            # 4. Trajets retours C -> A (3 prochains départs)
+            c_to_a = await self.api.async_get_next_journeys(self.station_c_id, self.station_a_id, count=3)
+
+            # 5. Dernier train de nuit B -> A (entre 22h et 03h30)
             last_return_b_to_a = await self.api.async_get_last_night_journey(self.station_b_id, self.station_a_id)
 
-            # 5. Dernier train de nuit C -> A (entre 22h et 03h30)
+            # 6. Dernier train de nuit C -> A (entre 22h et 03h30)
             last_return_c_to_a = await self.api.async_get_last_night_journey(self.station_c_id, self.station_a_id)
 
-            # 6. Perturbations de la ligne H
+            # 7. Perturbations de la ligne H
             disruptions = await self.api.async_get_line_disruptions("H")
 
             return {
@@ -106,6 +109,7 @@ class DomolinkTransportCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "a_to_b": a_to_b,
                 "a_to_c": a_to_c,
                 "b_to_a": b_to_a,
+                "c_to_a": c_to_a,
                 "last_return_b_to_a": last_return_b_to_a,
                 "last_return_c_to_a": last_return_c_to_a,
                 "disruptions": disruptions,

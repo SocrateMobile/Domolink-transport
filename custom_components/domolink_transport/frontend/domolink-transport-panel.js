@@ -2,11 +2,11 @@
  * DomoLink-Transport - Panneau Latéral & Carte Lovelace Officiels
  * Affiche les prochains trains et derniers retours de nuit sous forme de panneau de gare
  * (Mode Moderne Infogare TFT & Mode Mécanique Palettes Solari).
- * Version: 1.0.1
+ * Version: 1.0.2
  * Repo: https://github.com/SocrateMobile/Domolink-transport
  */
 
-const VERSION = "1.0.1";
+const VERSION = "1.0.2";
 const GITHUB_REPO = "SocrateMobile/Domolink-transport";
 
 class DomolinkTransportPanel extends HTMLElement {
@@ -97,6 +97,60 @@ class DomolinkTransportPanel extends HTMLElement {
       }
     }
 
+    const a_to_c = [];
+    for (let i = 1; i <= 3; i++) {
+      const s = states[`sensor.domolink_transport_a_to_c_${i}`];
+      if (s && s.state && s.state !== "unavailable" && s.state !== "unknown") {
+        a_to_c.push({
+          departure_time: s.state,
+          departure_time_str: s.state.substring(11, 16),
+          platform: s.attributes.platform || s.attributes.voie || "-",
+          line: s.attributes.line || "H",
+          direction: s.attributes.direction || "Ermont - Eaubonne",
+          headsign: s.attributes.headsign || s.attributes.mission || "TRAIN",
+          status_label: (s.attributes.delay || 0) > 0 ? `Retard +${s.attributes.delay} min` : "À l'heure",
+          minutes_remaining: s.attributes.minutes_remaining !== undefined ? s.attributes.minutes_remaining : 0,
+          is_on_time: !(s.attributes.delay > 0),
+        });
+      }
+    }
+
+    const b_to_a = [];
+    for (let i = 1; i <= 3; i++) {
+      const s = states[`sensor.domolink_transport_b_to_a_${i}`] || (i === 1 ? states[`sensor.train_traveler_par_eng_next_journey_1`] : null);
+      if (s && s.state && s.state !== "unavailable" && s.state !== "unknown") {
+        b_to_a.push({
+          departure_time: s.state,
+          departure_time_str: s.state.substring(11, 16),
+          platform: s.attributes.platform || s.attributes.voie || "30-36",
+          line: s.attributes.line || "H",
+          direction: s.attributes.direction || "Enghien-les-Bains",
+          headsign: s.attributes.headsign || s.attributes.mission || "TRAIN",
+          status_label: (s.attributes.delay || 0) > 0 ? `Retard +${s.attributes.delay} min` : "À l'heure",
+          minutes_remaining: s.attributes.minutes_remaining !== undefined ? s.attributes.minutes_remaining : 0,
+          is_on_time: !(s.attributes.delay > 0),
+        });
+      }
+    }
+
+    const c_to_a = [];
+    for (let i = 1; i <= 3; i++) {
+      const s = states[`sensor.domolink_transport_c_to_a_${i}`];
+      if (s && s.state && s.state !== "unavailable" && s.state !== "unknown") {
+        c_to_a.push({
+          departure_time: s.state,
+          departure_time_str: s.state.substring(11, 16),
+          platform: s.attributes.platform || s.attributes.voie || "3-4",
+          line: s.attributes.line || "H",
+          direction: s.attributes.direction || "Enghien-les-Bains",
+          headsign: s.attributes.headsign || s.attributes.mission || "TRAIN",
+          status_label: (s.attributes.delay || 0) > 0 ? `Retard +${s.attributes.delay} min` : "À l'heure",
+          minutes_remaining: s.attributes.minutes_remaining !== undefined ? s.attributes.minutes_remaining : 0,
+          is_on_time: !(s.attributes.delay > 0),
+        });
+      }
+    }
+
     const lastBtoA = states["sensor.domolink_transport_last_return_b_to_a"] || states["sensor.train_traveler_eng_par_last_journey_1"];
     let lastRetB = null;
     if (lastBtoA && lastBtoA.state && lastBtoA.state !== "unavailable") {
@@ -112,14 +166,31 @@ class DomolinkTransportPanel extends HTMLElement {
       };
     }
 
+    const lastCtoA = states["sensor.domolink_transport_last_return_c_to_a"];
+    let lastRetC = null;
+    if (lastCtoA && lastCtoA.state && lastCtoA.state !== "unavailable") {
+      lastRetC = {
+        departure_time: lastCtoA.state,
+        departure_time_str: lastCtoA.state.substring(11, 16),
+        platform: lastCtoA.attributes.platform || lastCtoA.attributes.voie || "3-4",
+        line: lastCtoA.attributes.line || "H",
+        direction: lastCtoA.attributes.direction || "Enghien-les-Bains",
+        headsign: lastCtoA.attributes.headsign || "TRAIN",
+        status_label: "À l'heure",
+        minutes_remaining: 0,
+      };
+    }
+
     this._data = {
       station_a: { name: "Enghien-les-Bains" },
       station_b: { name: "Paris Nord" },
       station_c: { name: "Ermont - Eaubonne" },
       a_to_b: a_to_b,
-      a_to_c: [],
+      a_to_c: a_to_c,
+      b_to_a: b_to_a,
+      c_to_a: c_to_a,
       last_return_b_to_a: lastRetB,
-      last_return_c_to_a: null,
+      last_return_c_to_a: lastRetC,
       disruptions: [],
     };
     this._updateDisplay();
@@ -544,6 +615,123 @@ class DomolinkTransportPanel extends HTMLElement {
           letter-spacing: 1px;
         }
 
+        /* Section Headers */
+        .section-header {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          margin-bottom: 14px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .section-title {
+          font-size: 1.2rem;
+          font-weight: 800;
+          letter-spacing: 0.5px;
+          color: #e0e6ed;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .section-subtitle {
+          font-size: 0.85rem;
+          color: #718096;
+          font-weight: 600;
+        }
+
+        /* Return Night Summary inside cards */
+        .return-night-summary {
+          margin: 14px 18px 18px 18px;
+          padding: 12px 16px;
+          border-radius: 12px;
+          background: linear-gradient(135deg, rgba(0, 40, 100, 0.45) 0%, rgba(0, 80, 160, 0.25) 100%);
+          border: 1px solid rgba(0, 170, 255, 0.3);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+
+        .night-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.75rem;
+          font-weight: 800;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+          color: #ffde59;
+          background: rgba(255, 222, 89, 0.15);
+          border: 1px solid rgba(255, 222, 89, 0.35);
+          padding: 4px 10px;
+          border-radius: 6px;
+          white-space: nowrap;
+        }
+
+        .night-info {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .night-dep {
+          font-size: 1.4rem;
+          font-weight: 900;
+          color: #ffde59;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .night-platform {
+          font-size: 0.9rem;
+          font-weight: 800;
+          color: #00d4ff;
+          background: rgba(0, 212, 255, 0.15);
+          padding: 3px 8px;
+          border-radius: 6px;
+          border: 1px solid rgba(0, 212, 255, 0.3);
+          white-space: nowrap;
+        }
+
+        .night-desc {
+          font-size: 0.85rem;
+          color: #a0aec0;
+          font-weight: 500;
+        }
+
+        .mechanical-theme .return-night-summary {
+          background: #101014;
+          border: 1px solid #282830;
+          box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.7);
+        }
+
+        .mechanical-theme .night-badge {
+          font-family: 'Courier New', monospace;
+          background: #0a0a0c;
+          border: 1px solid #33333a;
+          color: #ffcc00;
+        }
+
+        .mechanical-theme .night-dep {
+          font-family: 'Courier New', monospace;
+          color: #ffcc00;
+        }
+
+        .mechanical-theme .night-platform {
+          font-family: 'Courier New', monospace;
+          color: #ff3344;
+          background: #0a0a0c;
+          border: 1px solid #33333a;
+        }
+
+        .mechanical-theme .night-desc {
+          font-family: 'Courier New', monospace;
+          color: #a0aec0;
+        }
+
         /* Grid for 2 destinations */
         .destinations-grid {
           display: grid;
@@ -756,7 +944,14 @@ class DomolinkTransportPanel extends HTMLElement {
             <div class="ticker-content" id="tickerContent">Circulation normale sur l'ensemble de la Ligne H.</div>
           </div>
 
-          <!-- DESTINATIONS DÉPARTS (A -> B et A -> C) -->
+          <!-- SECTION DÉPARTS -->
+          <div class="section-header">
+            <div class="section-title">
+              <span>🚆 DÉPARTS DEPUIS <span id="sectionDepTitle">ENGHIEN</span></span>
+            </div>
+            <div class="section-subtitle">3 prochains trains vers vos destinations</div>
+          </div>
+
           <div class="destinations-grid">
             <!-- TABLEAU A -> B -->
             <div class="board-card">
@@ -805,10 +1000,84 @@ class DomolinkTransportPanel extends HTMLElement {
             </div>
           </div>
 
-          <!-- DERNIERS RETOURS DE NUIT -->
-          <div class="night-card">
+          <!-- SECTION RETOURS -->
+          <div class="section-header" style="margin-top: 32px;">
+            <div class="section-title">
+              <span>🔄 RETOURS VERS <span id="sectionRetTitle">ENGHIEN</span></span>
+            </div>
+            <div class="section-subtitle">3 prochains retours & Dernier train avant coupure</div>
+          </div>
+
+          <div class="destinations-grid">
+            <!-- TABLEAU B -> A -->
+            <div class="board-card">
+              <div class="board-header">
+                <div class="board-title" id="titleBtoA">
+                  🚆 <span id="labelStationB_ret">PARIS NORD</span> ➔ <span id="labelStationA_ret">ENGHIEN</span>
+                </div>
+                <div style="font-size: 0.85rem; color: #8899a6; font-weight: 600;">3 PROCHAINS RETOURS</div>
+              </div>
+              <table class="train-table">
+                <thead>
+                  <tr>
+                    <th>Départ</th>
+                    <th>Voie</th>
+                    <th>Mission / Direction</th>
+                    <th style="text-align: right;">Statut</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyBtoA">
+                  <tr><td colspan="4" style="text-align: center; padding: 24px; color: #8899a6;">Chargement des retours...</td></tr>
+                </tbody>
+              </table>
+              <!-- DERNIER RETOUR EN BAS DE CARTE -->
+              <div class="return-night-summary">
+                <div class="night-badge">🌙 DERNIER RETOUR</div>
+                <div class="night-info">
+                  <span class="night-dep" id="cardNightTimeBtoA">--:--</span>
+                  <span class="night-platform" id="cardNightPlatBtoA">Voie --</span>
+                  <span class="night-desc" id="cardNightDescBtoA">Dernier train avant coupure</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- TABLEAU C -> A -->
+            <div class="board-card">
+              <div class="board-header">
+                <div class="board-title" id="titleCtoA">
+                  🚆 <span id="labelStationC_ret">ERMONT - EAUBONNE</span> ➔ <span id="labelStationA_ret2">ENGHIEN</span>
+                </div>
+                <div style="font-size: 0.85rem; color: #8899a6; font-weight: 600;">3 PROCHAINS RETOURS</div>
+              </div>
+              <table class="train-table">
+                <thead>
+                  <tr>
+                    <th>Départ</th>
+                    <th>Voie</th>
+                    <th>Mission / Direction</th>
+                    <th style="text-align: right;">Statut</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyCtoA">
+                  <tr><td colspan="4" style="text-align: center; padding: 24px; color: #8899a6;">Chargement des retours...</td></tr>
+                </tbody>
+              </table>
+              <!-- DERNIER RETOUR EN BAS DE CARTE -->
+              <div class="return-night-summary">
+                <div class="night-badge">🌙 DERNIER RETOUR</div>
+                <div class="night-info">
+                  <span class="night-dep" id="cardNightTimeCtoA">--:--</span>
+                  <span class="night-platform" id="cardNightPlatCtoA">Voie --</span>
+                  <span class="night-desc" id="cardNightDescCtoA">Dernier train avant coupure</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DERNIERS RETOURS DE NUIT (RÉSUMÉ) -->
+          <div class="night-card" style="margin-top: 24px;">
             <div class="night-title">
-              🌙 Derniers Retours avant Coupure Nocturne
+              🌙 Synthèse Coupure Nocturne
             </div>
 
             <!-- RETOUR B -> A -->
@@ -1008,16 +1277,33 @@ station_c: Ermont - Eaubonne</div>
     const stB = (data.station_b && data.station_b.name) || "Paris Nord";
     const stC = (data.station_c && data.station_c.name) || "Ermont - Eaubonne";
 
+    // Section Titles
+    if (root.getElementById("sectionDepTitle")) root.getElementById("sectionDepTitle").innerText = stA.toUpperCase();
+    if (root.getElementById("sectionRetTitle")) root.getElementById("sectionRetTitle").innerText = stA.toUpperCase();
+
+    // Station labels - Départs
     root.getElementById("labelStationA").innerText = stA.toUpperCase();
     root.getElementById("labelStationB").innerText = stB.toUpperCase();
     root.getElementById("labelStationA2").innerText = stA.toUpperCase();
     root.getElementById("labelStationC").innerText = stC.toUpperCase();
 
-    // Render Table A -> B
+    // Station labels - Retours
+    if (root.getElementById("labelStationB_ret")) root.getElementById("labelStationB_ret").innerText = stB.toUpperCase();
+    if (root.getElementById("labelStationA_ret")) root.getElementById("labelStationA_ret").innerText = stA.toUpperCase();
+    if (root.getElementById("labelStationC_ret")) root.getElementById("labelStationC_ret").innerText = stC.toUpperCase();
+    if (root.getElementById("labelStationA_ret2")) root.getElementById("labelStationA_ret2").innerText = stA.toUpperCase();
+
+    // Render Table A -> B (Départs vers B)
     this._renderTableRows(root.getElementById("tbodyAtoB"), data.a_to_b || [], stB);
 
-    // Render Table A -> C
+    // Render Table A -> C (Départs vers C)
     this._renderTableRows(root.getElementById("tbodyAtoC"), data.a_to_c || [], stC);
+
+    // Render Table B -> A (3 prochains retours de Paris vers Enghien)
+    this._renderTableRows(root.getElementById("tbodyBtoA"), data.b_to_a || [], stA);
+
+    // Render Table C -> A (3 prochains retours d'Ermont vers Enghien)
+    this._renderTableRows(root.getElementById("tbodyCtoA"), data.c_to_a || [], stA);
 
     // Render Night Returns
     const retB = data.last_return_b_to_a;
@@ -1037,10 +1323,18 @@ station_c: Ermont - Eaubonne</div>
       root.getElementById("nightTimeBtoA").innerText = retB.departure_time_str;
       root.getElementById("nightPlatformBtoA").innerText = `Voie ${retB.platform || '-'}`;
       root.getElementById("nightDetailsBtoA").innerText = `Dernier train avant coupure • Ligne ${retB.line || 'H'} (${retB.headsign || 'Mission'})${arrStr} ${countdownPart}`;
+
+      if (root.getElementById("cardNightTimeBtoA")) root.getElementById("cardNightTimeBtoA").innerText = retB.departure_time_str;
+      if (root.getElementById("cardNightPlatBtoA")) root.getElementById("cardNightPlatBtoA").innerText = `Voie ${retB.platform || '-'}`;
+      if (root.getElementById("cardNightDescBtoA")) root.getElementById("cardNightDescBtoA").innerText = `Ligne ${retB.line || 'H'} (${retB.headsign || 'Mission'})${arrStr} ${countdownPart}`;
     } else {
       root.getElementById("nightTimeBtoA").innerText = "Terminé";
       root.getElementById("nightPlatformBtoA").innerText = "-";
       root.getElementById("nightDetailsBtoA").innerText = "Coupure nocturne en cours (service terminé pour cette nuit)";
+
+      if (root.getElementById("cardNightTimeBtoA")) root.getElementById("cardNightTimeBtoA").innerText = "Terminé";
+      if (root.getElementById("cardNightPlatBtoA")) root.getElementById("cardNightPlatBtoA").innerText = "-";
+      if (root.getElementById("cardNightDescBtoA")) root.getElementById("cardNightDescBtoA").innerText = "Coupure nocturne en cours";
     }
 
     const retC = data.last_return_c_to_a;
@@ -1060,10 +1354,18 @@ station_c: Ermont - Eaubonne</div>
       root.getElementById("nightTimeCtoA").innerText = retC.departure_time_str;
       root.getElementById("nightPlatformCtoA").innerText = `Voie ${retC.platform || '-'}`;
       root.getElementById("nightDetailsCtoA").innerText = `Dernier train avant coupure • Ligne ${retC.line || 'H'} (${retC.headsign || 'Mission'})${arrStr} ${countdownPart}`;
+
+      if (root.getElementById("cardNightTimeCtoA")) root.getElementById("cardNightTimeCtoA").innerText = retC.departure_time_str;
+      if (root.getElementById("cardNightPlatCtoA")) root.getElementById("cardNightPlatCtoA").innerText = `Voie ${retC.platform || '-'}`;
+      if (root.getElementById("cardNightDescCtoA")) root.getElementById("cardNightDescCtoA").innerText = `Ligne ${retC.line || 'H'} (${retC.headsign || 'Mission'})${arrStr} ${countdownPart}`;
     } else {
       root.getElementById("nightTimeCtoA").innerText = "Terminé";
       root.getElementById("nightPlatformCtoA").innerText = "-";
       root.getElementById("nightDetailsCtoA").innerText = "Coupure nocturne en cours (service terminé pour cette nuit)";
+
+      if (root.getElementById("cardNightTimeCtoA")) root.getElementById("cardNightTimeCtoA").innerText = "Terminé";
+      if (root.getElementById("cardNightPlatCtoA")) root.getElementById("cardNightPlatCtoA").innerText = "-";
+      if (root.getElementById("cardNightDescCtoA")) root.getElementById("cardNightDescCtoA").innerText = "Coupure nocturne en cours";
     }
 
     // Ticker disruptions
