@@ -2,11 +2,11 @@
  * DomoLink-Transport - Panneau Latéral & Carte Lovelace Officiels
  * Affiche les prochains trains et derniers retours de nuit sous forme de panneau de gare
  * (Mode Moderne Infogare TFT & Mode Mécanique Palettes Solari).
- * Version: 1.0.5
+ * Version: 1.0.6
  * Repo: https://github.com/SocrateMobile/Domolink-transport
  */
 
-const VERSION = "1.0.5";
+const VERSION = "1.0.6";
 const GITHUB_REPO = "SocrateMobile/Domolink-transport";
 
 class DomolinkTransportPanel extends HTMLElement {
@@ -1647,6 +1647,15 @@ class DomolinkTransportCard extends DomolinkTransportPanel {
     if (this._config.style) {
       this._styleMode = this._config.style;
     }
+    if (this._initialized && this._data) {
+      this._updateDisplay();
+    }
+  }
+
+  set hass(hass) {
+    this._isCard = true;
+    this.setAttribute("is-card", "true");
+    super.hass = hass;
   }
 
   connectedCallback() {
@@ -1655,17 +1664,31 @@ class DomolinkTransportCard extends DomolinkTransportPanel {
     super.connectedCallback();
   }
 
+  static getStubConfig() {
+    return {
+      type: "custom:domolink-transport-card",
+      style: "modern",
+    };
+  }
+
+  static async getConfigElement() {
+    return undefined;
+  }
+
   getCardSize() {
     return 6;
   }
 }
 customElements.define("domolink-transport-card", DomolinkTransportCard);
 window.customCards = window.customCards || [];
-window.customCards.push({
-  type: "domolink-transport-card",
-  name: "DomoLink-Transport Card",
-  description: "Panneau de gare en temps réel avec mode moderne et mécanique.",
-});
+if (!window.customCards.some((c) => c.type === "domolink-transport-card")) {
+  window.customCards.push({
+    type: "domolink-transport-card",
+    name: "DomoLink-Transport Card",
+    description: "Panneau de gare en temps réel avec mode moderne et mécanique.",
+    preview: true,
+  });
+}
 
 
 /* =========================================================================
