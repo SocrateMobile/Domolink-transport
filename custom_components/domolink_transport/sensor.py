@@ -371,10 +371,12 @@ class LegacyLastJourneySensor(DomolinkTransportBaseSensor):
             "line": j.get("line"),
             "direction": j.get("direction"),
             "departure_time": j.get("departure_time"),
+            "arrival_time": j.get("arrival_time"),
             "duration": j.get("duration_seconds"),
             "physical_mode": j.get("physical_mode"),
             "platform": j.get("platform"),
             "voie": j.get("platform"),
+            "headsign": j.get("headsign"),
         }
 
 

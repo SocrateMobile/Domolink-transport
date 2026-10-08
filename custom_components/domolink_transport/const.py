@@ -39,7 +39,7 @@ DEFAULT_STATION_B_NAME = "Paris Nord"
 DEFAULT_STATION_B_ID = "stop_area:SNCF:87271007"
 
 DEFAULT_STATION_C_NAME = "Ermont - Eaubonne"
-DEFAULT_STATION_C_ID = "stop_area:SNCF:87276156"
+DEFAULT_STATION_C_ID = "stop_area:SNCF:87276055"
 
 # Base API URLs
 SNCF_API_URL = "https://api.sncf.com/v1"
