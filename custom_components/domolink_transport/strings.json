@@ -1,0 +1,41 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configuration de DomoLink-Transport",
+        "description": "Renseignez votre clé API SNCF et vos gares habituelles. Vous pourrez également renseigner une clé API PRIM (Île-de-France Mobilités) pour les voies temps réel.",
+        "data": {
+          "api_key": "Clé API SNCF / Navitia",
+          "prim_api_key": "Clé API PRIM IDFM (Optionnelle)",
+          "station_a": "Gare A (Domicile, ex: Enghien-les-Bains)",
+          "station_b": "Gare B (Destination 1, ex: Paris Nord)",
+          "station_c": "Gare C (Destination 2, ex: Ermont - Eaubonne)",
+          "scan_interval": "Fréquence d'actualisation (secondes)",
+          "create_legacy_entities": "Créer les capteurs rétrocompatibles pour openHASP"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Clé API invalide ou accès refusé par le serveur SNCF.",
+      "cannot_connect": "Impossible de contacter l'API."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options de DomoLink-Transport",
+        "description": "Modifiez vos paramètres d'API, vos gares ou vos options d'affichage.",
+        "data": {
+          "api_key": "Clé API SNCF / Navitia",
+          "prim_api_key": "Clé API PRIM IDFM (Optionnelle)",
+          "station_a": "Gare A (Domicile)",
+          "station_b": "Gare B (Destination 1)",
+          "station_c": "Gare C (Destination 2)",
+          "scan_interval": "Fréquence d'actualisation (secondes)",
+          "create_legacy_entities": "Créer les capteurs rétrocompatibles openHASP",
+          "enable_panel": "Activer le panneau dans la barre latérale gauche"
+        }
+      }
+    }
+  }
+}
