@@ -60,12 +60,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             except Exception as err:
                 _LOGGER.debug("Erreur register_static_path: %s", err)
 
-    # 2. Register Sidebar Panel
+    # 2. Register Sidebar Panel & Lovelace card resource
     enable_panel = entry.options.get(CONF_ENABLE_PANEL, entry.data.get(CONF_ENABLE_PANEL, True))
     if enable_panel:
         _async_register_panel(hass)
     else:
         _async_remove_panel(hass)
+
+    await _async_register_lovelace_resource(hass)
 
     # 3. Register HTTP API View for Panel
     hass.http.register_view(DomolinkTransportDataApiView(coordinator))
@@ -120,6 +122,51 @@ def _async_remove_panel(hass: HomeAssistant) -> None:
         frontend.async_remove_panel(hass, PANEL_URL_PATH)
     except Exception as err:
         _LOGGER.debug("Erreur retrait panneau latéral: %s", err)
+
+
+async def _async_register_lovelace_resource(hass: HomeAssistant) -> None:
+    """Auto-register DomoLink-Transport Lovelace card resource in storage mode."""
+    card_url = f"{FRONTEND_URL_PATH}/{FRONTEND_FILE_NAME}?v={VERSION}"
+    base_url = f"{FRONTEND_URL_PATH}/{FRONTEND_FILE_NAME}"
+
+    async def _check_and_register(_now: Any = None) -> None:
+        lovelace = hass.data.get("lovelace")
+        if lovelace and getattr(lovelace.resources, "loaded", False):
+            try:
+                existing_resources = [
+                    res for res in lovelace.resources.async_items()
+                    if res.get("url", "").split("?")[0] == base_url
+                ]
+
+                if existing_resources:
+                    for res in existing_resources:
+                        if res.get("url") != card_url:
+                            _LOGGER.info("Mise à jour de la ressource Lovelace DomoLink vers %s", card_url)
+                            await lovelace.resources.async_update_item(
+                                res["id"],
+                                {
+                                    "res_type": "module",
+                                    "url": card_url,
+                                },
+                            )
+                else:
+                    _LOGGER.info("Enregistrement automatique de la ressource Lovelace DomoLink : %s", card_url)
+                    await lovelace.resources.async_create_item(
+                        {
+                            "res_type": "module",
+                            "url": card_url,
+                        }
+                    )
+            except Exception as err:
+                _LOGGER.debug("Erreur enregistrement ressource Lovelace: %s", err)
+        else:
+            from homeassistant.helpers.event import async_call_later
+            async_call_later(hass, 2, _check_and_register)
+
+    lovelace = hass.data.get("lovelace")
+    mode = getattr(lovelace, "mode", None) or getattr(lovelace, "resource_mode", "yaml") if lovelace else "storage"
+    if mode == "storage" or lovelace is None:
+        await _check_and_register()
 
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
