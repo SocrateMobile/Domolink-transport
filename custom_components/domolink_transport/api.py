@@ -99,28 +99,24 @@ class DomolinkTransportApiClient:
         from_id: str,
         to_id: str,
     ) -> dict[str, Any] | None:
-        """Fetch the last return train between 22:00 today and 03:30 tomorrow."""
+        """Fetch the last return train before nocturnal interruption."""
         now = datetime.now(TZ_PARIS)
         
-        # Si on est entre 00h et 04h du matin, la date de début est HIER 22h et la fin est AUJOURD'HUI 03h30
+        # Si on est entre 00h et 04h du matin, la soirée a débuté hier à 21h00
         if now.hour < 4:
             start_date = (now - timedelta(days=1)).strftime("%Y%m%d")
-            end_date = now.strftime("%Y%m%d")
         else:
             start_date = now.strftime("%Y%m%d")
-            end_date = (now + timedelta(days=1)).strftime("%Y%m%d")
 
-        from_datetime = f"{start_date}T220000"
-        until_datetime = f"{end_date}T033000"
+        from_datetime = f"{start_date}T210000"
 
         url = f"{SNCF_API_URL}/coverage/sncf/journeys"
         params = {
             "from": from_id,
             "to": to_id,
             "from_datetime": from_datetime,
-            "until_datetime": until_datetime,
             "datetime_represents": "departure",
-            "min_nb_journeys": 15,
+            "min_nb_journeys": 20,
             "data_freshness": "realtime",
         }
         headers = {"Authorization": self._api_key}
@@ -135,13 +131,50 @@ class DomolinkTransportApiClient:
                 if not journeys:
                     return None
                 
-                parsed_list = [self._parse_journey(j, from_id, to_id) for j in journeys]
-                valid = [p for p in parsed_list if p is not None]
-                if not valid:
-                    return None
-                
-                # Le dernier train est le dernier de la liste ordonnée
-                return valid[-1]
+                # Filtrer et trier par heure de départ croissante
+                valid_journeys = [j for j in journeys if j.get("departure_date_time")]
+                # Priorité aux trajets sans correspondances si existants
+                direct_journeys = [j for j in valid_journeys if j.get("nb_transfers", 0) == 0]
+                if direct_journeys:
+                    target_list = direct_journeys
+                else:
+                    target_list = valid_journeys
+
+                target_list.sort(key=lambda x: x.get("departure_date_time", ""))
+
+                # Détection du dernier train avant la coupure nocturne (trou >= 120 minutes)
+                last_raw = None
+                for i in range(len(target_list)):
+                    dep_str = target_list[i].get("departure_date_time")
+                    dep_dt = datetime.strptime(dep_str, "%Y%m%dT%H%M%S").replace(tzinfo=TZ_PARIS)
+                    
+                    if i + 1 < len(target_list):
+                        next_dep_str = target_list[i + 1].get("departure_date_time")
+                        next_dep_dt = datetime.strptime(next_dep_str, "%Y%m%dT%H%M%S").replace(tzinfo=TZ_PARIS)
+                        gap_minutes = (next_dep_dt - dep_dt).total_seconds() / 60
+                        if gap_minutes >= 120:
+                            # Coupure nocturne détectée !
+                            last_raw = target_list[i]
+                            break
+                    else:
+                        if dep_dt.hour < 4:
+                            last_raw = target_list[i]
+
+                # Fallback : dernier train partant entre 21h et 03h30
+                if not last_raw and target_list:
+                    night_trains = []
+                    for j in target_list:
+                        dep_str = j.get("departure_date_time")
+                        if dep_str:
+                            dt = datetime.strptime(dep_str, "%Y%m%dT%H%M%S").replace(tzinfo=TZ_PARIS)
+                            if dt.hour >= 21 or dt.hour < 4:
+                                night_trains.append(j)
+                    if night_trains:
+                        last_raw = night_trains[-1]
+
+                if last_raw:
+                    return self._parse_journey(last_raw, from_id, to_id)
+                return None
         except Exception as err:
             _LOGGER.error("Exception API dernier train (%s -> %s): %s", from_id, to_id, err)
             return None
@@ -249,6 +282,9 @@ class DomolinkTransportApiClient:
                 elif "87271007" in from_id:
                     # Départ de Paris Nord (Surface Ligne H = Voies 30-36)
                     platform = "30-36"
+                elif "87276055" in from_id:
+                    # Départ d'Ermont - Eaubonne vers Paris/Enghien (Voies 3-4)
+                    platform = "3-4"
                 else:
                     platform = "-"
 

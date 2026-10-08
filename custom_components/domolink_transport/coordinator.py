@@ -68,7 +68,10 @@ class DomolinkTransportCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.station_b_id = entry.options.get(CONF_STATION_B_ID, entry.data.get(CONF_STATION_B_ID, DEFAULT_STATION_B_ID))
 
         self.station_c_name = entry.options.get(CONF_STATION_C, entry.data.get(CONF_STATION_C, DEFAULT_STATION_C_NAME))
-        self.station_c_id = entry.options.get(CONF_STATION_C_ID, entry.data.get(CONF_STATION_C_ID, DEFAULT_STATION_C_ID))
+        st_c_id = entry.options.get(CONF_STATION_C_ID, entry.data.get(CONF_STATION_C_ID, DEFAULT_STATION_C_ID))
+        if st_c_id == "stop_area:SNCF:87276156":
+            st_c_id = DEFAULT_STATION_C_ID
+        self.station_c_id = st_c_id
 
         self.create_legacy_entities = entry.options.get(
             CONF_CREATE_LEGACY_ENTITIES,

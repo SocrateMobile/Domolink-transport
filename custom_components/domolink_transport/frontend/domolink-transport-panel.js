@@ -346,10 +346,14 @@ class DomolinkTransportPanel extends HTMLElement {
         }
 
         .modern-theme .train-time {
-          font-size: 1.7rem;
+          padding: 12px 20px;
+        }
+
+        .modern-theme .train-time-main {
+          font-size: 1.75rem;
           font-weight: 900;
           color: #ffde59;
-          padding: 16px 20px;
+          line-height: 1.1;
           font-variant-numeric: tabular-nums;
           letter-spacing: 1px;
           text-shadow: 0 0 8px rgba(255, 222, 89, 0.3);
@@ -416,10 +420,10 @@ class DomolinkTransportPanel extends HTMLElement {
         }
 
         .modern-theme .train-countdown {
-          font-size: 1.1rem;
-          font-weight: 800;
-          color: #a0c4ff;
-          margin-left: 8px;
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: #7ba6e8;
+          margin-top: 4px;
         }
 
         /* ---------------- MECHANICAL SPLIT-FLAP STYLE ---------------- */
@@ -773,10 +777,10 @@ class DomolinkTransportPanel extends HTMLElement {
             </div>
           </div>
 
-          <!-- DERNIERS RETOURS DE NUIT (22h00 -> 03h30) -->
+          <!-- DERNIERS RETOURS DE NUIT -->
           <div class="night-card">
             <div class="night-title">
-              🌙 Derniers Retours Nocturnes (22h00 ➔ 03h30)
+              🌙 Derniers Retours avant Coupure Nocturne
             </div>
 
             <!-- RETOUR B -> A -->
@@ -970,23 +974,47 @@ station_c: Ermont - Eaubonne</div>
     const retB = data.last_return_b_to_a;
     root.getElementById("nightRouteBtoA").innerText = `${stB.toUpperCase()} ➔ ${stA.toUpperCase()}`;
     if (retB && retB.departure_time_str) {
+      const arrStr = retB.arrival_time_str ? ` • Arrivée à ${stA} à ${retB.arrival_time_str}` : '';
+      let countdownPart = '';
+      if (retB.minutes_remaining !== undefined) {
+        if (retB.minutes_remaining > 60) {
+          countdownPart = `(dans ${Math.floor(retB.minutes_remaining / 60)}h${String(retB.minutes_remaining % 60).padStart(2, '0')})`;
+        } else if (retB.minutes_remaining > 0) {
+          countdownPart = `(dans ${retB.minutes_remaining} min)`;
+        } else {
+          countdownPart = `(déjà parti)`;
+        }
+      }
       root.getElementById("nightTimeBtoA").innerText = retB.departure_time_str;
       root.getElementById("nightPlatformBtoA").innerText = `Voie ${retB.platform || '-'}`;
-      root.getElementById("nightDetailsBtoA").innerText = `Dernier train à ${retB.departure_time_str} (${retB.line || 'H'} - ${retB.headsign || 'Mission'})`;
+      root.getElementById("nightDetailsBtoA").innerText = `Dernier train avant coupure • Ligne ${retB.line || 'H'} (${retB.headsign || 'Mission'})${arrStr} ${countdownPart}`;
     } else {
-      root.getElementById("nightTimeBtoA").innerText = "Non circulé";
+      root.getElementById("nightTimeBtoA").innerText = "Terminé";
       root.getElementById("nightPlatformBtoA").innerText = "-";
+      root.getElementById("nightDetailsBtoA").innerText = "Coupure nocturne en cours (service terminé pour cette nuit)";
     }
 
     const retC = data.last_return_c_to_a;
     root.getElementById("nightRouteCtoA").innerText = `${stC.toUpperCase()} ➔ ${stA.toUpperCase()}`;
     if (retC && retC.departure_time_str) {
+      const arrStr = retC.arrival_time_str ? ` • Arrivée à ${stA} à ${retC.arrival_time_str}` : '';
+      let countdownPart = '';
+      if (retC.minutes_remaining !== undefined) {
+        if (retC.minutes_remaining > 60) {
+          countdownPart = `(dans ${Math.floor(retC.minutes_remaining / 60)}h${String(retC.minutes_remaining % 60).padStart(2, '0')})`;
+        } else if (retC.minutes_remaining > 0) {
+          countdownPart = `(dans ${retC.minutes_remaining} min)`;
+        } else {
+          countdownPart = `(déjà parti)`;
+        }
+      }
       root.getElementById("nightTimeCtoA").innerText = retC.departure_time_str;
       root.getElementById("nightPlatformCtoA").innerText = `Voie ${retC.platform || '-'}`;
-      root.getElementById("nightDetailsCtoA").innerText = `Dernier train à ${retC.departure_time_str} (${retC.line || 'H'} - ${retC.headsign || 'Mission'})`;
+      root.getElementById("nightDetailsCtoA").innerText = `Dernier train avant coupure • Ligne ${retC.line || 'H'} (${retC.headsign || 'Mission'})${arrStr} ${countdownPart}`;
     } else {
-      root.getElementById("nightTimeCtoA").innerText = "Non circulé";
+      root.getElementById("nightTimeCtoA").innerText = "Terminé";
       root.getElementById("nightPlatformCtoA").innerText = "-";
+      root.getElementById("nightDetailsCtoA").innerText = "Coupure nocturne en cours (service terminé pour cette nuit)";
     }
 
     // Ticker disruptions
@@ -1038,8 +1066,9 @@ station_c: Ermont - Eaubonne</div>
       if (isMech) {
         html += `
           <tr class="train-row">
-            <td class="train-time" style="padding: 12px 16px;">
-              <span class="flap-box">${time}</span>
+            <td class="train-time" style="padding: 10px 16px;">
+              <div><span class="flap-box">${time}</span></div>
+              <div style="font-family: monospace; font-size: 0.8rem; color: #a0aec0; margin-top: 4px;">(${countdownText})</div>
             </td>
             <td class="train-platform" style="padding: 12px 16px;">
               <span class="flap-box">${platform}</span>
@@ -1050,7 +1079,6 @@ station_c: Ermont - Eaubonne</div>
             </td>
             <td style="padding: 12px 16px; text-align: right;">
               <span class="flap-box ${statusClass}">${statusText.toUpperCase()}</span>
-              <span style="font-family: monospace; color: #a0aec0; margin-left: 8px;">${countdownText}</span>
             </td>
           </tr>
         `;
@@ -1058,8 +1086,8 @@ station_c: Ermont - Eaubonne</div>
         html += `
           <tr class="train-row">
             <td class="train-time">
-              ${time}
-              <span class="train-countdown">(${countdownText})</span>
+              <div class="train-time-main">${time}</div>
+              <div class="train-countdown">(${countdownText})</div>
             </td>
             <td>
               <span class="train-platform">${platform}</span>
