@@ -2,11 +2,11 @@
  * DomoLink-Transport - Panneau Latéral & Carte Lovelace Officiels
  * Affiche les prochains trains et derniers retours de nuit sous forme de panneau de gare
  * (Mode Moderne Infogare TFT & Mode Mécanique Palettes Solari).
- * Version: 1.0.3
+ * Version: 1.0.4
  * Repo: https://github.com/SocrateMobile/Domolink-transport
  */
 
-const VERSION = "1.0.3";
+const VERSION = "1.0.4";
 const GITHUB_REPO = "SocrateMobile/Domolink-transport";
 
 class DomolinkTransportPanel extends HTMLElement {
@@ -239,6 +239,9 @@ class DomolinkTransportPanel extends HTMLElement {
   }
 
   _renderLayout() {
+    if (this._isCard) {
+      this.setAttribute("is-card", "true");
+    }
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -249,6 +252,102 @@ class DomolinkTransportPanel extends HTMLElement {
           color: #e0e6ed;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
           box-sizing: border-box;
+          container-type: inline-size;
+        }
+
+        :host([is-card]), :host(.is-card) {
+          height: auto !important;
+          max-height: none !important;
+          overflow: visible !important;
+          background: transparent !important;
+        }
+
+        :host([is-card]) .container, :host(.is-card) .container {
+          padding: 0 !important;
+          margin: 0 !important;
+          max-width: 100% !important;
+          gap: 14px !important;
+        }
+
+        :host([is-card]) .navbar, :host(.is-card) .navbar {
+          padding: 8px 12px !important;
+          border-radius: 12px !important;
+          margin-bottom: 2px !important;
+          position: static !important;
+          flex-wrap: wrap !important;
+          gap: 8px !important;
+        }
+
+        :host([is-card]) #btnGenCard, :host(.is-card) #btnGenCard {
+          display: none !important;
+        }
+
+        :host([is-card]) .brand-title, :host(.is-card) .brand-title {
+          font-size: 1.05rem !important;
+        }
+
+        :host([is-card]) .destinations-grid, :host(.is-card) .destinations-grid {
+          grid-template-columns: 1fr !important;
+          gap: 14px !important;
+        }
+
+        :host([is-card]) .night-card, :host(.is-card) .night-card {
+          grid-template-columns: 1fr !important;
+          padding: 12px 14px !important;
+          gap: 10px !important;
+        }
+
+        :host([is-card]) .board-header, :host(.is-card) .board-header {
+          padding: 10px 14px !important;
+        }
+
+        :host([is-card]) .board-title, :host(.is-card) .board-title {
+          font-size: 1.05rem !important;
+        }
+
+        :host([is-card]) .train-table th, :host(.is-card) .train-table th {
+          padding: 6px 8px !important;
+          font-size: 0.68rem !important;
+        }
+
+        :host([is-card]) .train-time, :host(.is-card) .train-time {
+          padding: 8px 8px !important;
+        }
+
+        :host([is-card]) .train-time-main, :host(.is-card) .train-time-main {
+          font-size: 1.25rem !important;
+        }
+
+        :host([is-card]) .train-countdown, :host(.is-card) .train-countdown {
+          font-size: 0.72rem !important;
+          margin-top: 1px !important;
+        }
+
+        :host([is-card]) .train-platform, :host(.is-card) .train-platform {
+          font-size: 0.95rem !important;
+          padding: 3px 6px !important;
+          min-width: 28px !important;
+        }
+
+        :host([is-card]) .train-dest, :host(.is-card) .train-dest {
+          padding: 8px 8px !important;
+          font-size: 0.92rem !important;
+        }
+
+        :host([is-card]) .train-mission, :host(.is-card) .train-mission {
+          padding: 2px 6px !important;
+          font-size: 0.76rem !important;
+        }
+
+        :host([is-card]) .train-status, :host(.is-card) .train-status {
+          padding: 8px 8px !important;
+          font-size: 0.8rem !important;
+          white-space: nowrap !important;
+        }
+
+        :host([is-card]) .return-night-summary, :host(.is-card) .return-night-summary {
+          margin: 8px 10px 10px 10px !important;
+          padding: 8px 10px !important;
         }
 
         * {
@@ -428,9 +527,9 @@ class DomolinkTransportPanel extends HTMLElement {
           background: #091a33;
           color: #7b9acc;
           text-transform: uppercase;
-          font-size: 0.75rem;
+          font-size: 0.72rem;
           letter-spacing: 1px;
-          padding: 12px 20px;
+          padding: 8px 10px;
           text-align: left;
           font-weight: 700;
         }
@@ -445,11 +544,11 @@ class DomolinkTransportPanel extends HTMLElement {
         }
 
         .modern-theme .train-time {
-          padding: 12px 20px;
+          padding: 8px 10px;
         }
 
         .modern-theme .train-time-main {
-          font-size: 1.75rem;
+          font-size: 1.5rem;
           font-weight: 900;
           color: #ffde59;
           line-height: 1.1;
@@ -459,42 +558,56 @@ class DomolinkTransportPanel extends HTMLElement {
         }
 
         .modern-theme .train-dest {
-          font-size: 1.2rem;
+          font-size: 1.05rem;
           font-weight: 700;
           color: #ffffff;
-          padding: 16px 20px;
+          padding: 8px 10px;
         }
 
         .modern-theme .train-mission {
           display: inline-block;
           background: #002b66;
           color: #38b6ff;
-          padding: 4px 10px;
+          padding: 3px 8px;
           border-radius: 6px;
           font-weight: 800;
-          font-size: 0.9rem;
-          letter-spacing: 1.5px;
+          font-size: 0.85rem;
+          letter-spacing: 1px;
           border: 1px solid #0055ff;
         }
 
         .modern-theme .train-platform {
-          font-size: 1.4rem;
+          font-size: 1.25rem;
           font-weight: 900;
           color: #030b18;
           background: #ffde59;
-          padding: 4px 14px;
+          padding: 3px 8px;
           border-radius: 8px;
           display: inline-block;
           text-align: center;
-          min-width: 44px;
+          min-width: 32px;
           box-shadow: 0 0 10px rgba(255, 222, 89, 0.5);
         }
 
+        .modern-theme .train-platform.platform-range {
+          font-size: 0.95rem;
+          padding: 2px 6px;
+          letter-spacing: -0.5px;
+          min-width: 28px;
+        }
+
+        .mechanical-theme .flap-box.platform-range {
+          font-size: 1rem !important;
+          letter-spacing: 0px !important;
+          padding: 4px 6px !important;
+        }
+
         .modern-theme .train-status {
-          font-size: 1rem;
+          font-size: 0.92rem;
           font-weight: 700;
-          padding: 16px 20px;
+          padding: 8px 10px;
           text-align: right;
+          white-space: nowrap;
         }
 
         .status-ontime {
@@ -735,8 +848,8 @@ class DomolinkTransportPanel extends HTMLElement {
         /* Grid for 2 destinations */
         .destinations-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-          gap: 24px;
+          grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+          gap: 16px;
         }
 
         /* Night returns panel */
@@ -888,14 +1001,65 @@ class DomolinkTransportPanel extends HTMLElement {
           margin-bottom: 16px;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 820px) {
           .destinations-grid {
             grid-template-columns: 1fr;
           }
+          .container {
+            padding: 12px;
+            gap: 14px;
+          }
           .navbar {
-            flex-direction: column;
-            gap: 12px;
-            align-items: flex-start;
+            padding: 10px 14px;
+            gap: 8px;
+            flex-wrap: wrap;
+          }
+        }
+
+        @container (max-width: 540px) {
+          .destinations-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+          .board-header {
+            padding: 8px 10px !important;
+          }
+          .board-title {
+            font-size: 0.95rem !important;
+          }
+          .modern-theme .train-table th {
+            padding: 5px 6px !important;
+            font-size: 0.65rem !important;
+          }
+          .modern-theme .train-time {
+            padding: 6px 6px !important;
+          }
+          .modern-theme .train-time-main {
+            font-size: 1.15rem !important;
+          }
+          .modern-theme .train-countdown {
+            font-size: 0.68rem !important;
+          }
+          .modern-theme .train-platform {
+            font-size: 0.85rem !important;
+            padding: 2px 5px !important;
+            min-width: 24px !important;
+          }
+          .modern-theme .train-dest {
+            padding: 6px 6px !important;
+            font-size: 0.85rem !important;
+          }
+          .modern-theme .train-mission {
+            font-size: 0.72rem !important;
+            padding: 1px 4px !important;
+          }
+          .modern-theme .train-status {
+            padding: 6px 6px !important;
+            font-size: 0.75rem !important;
+          }
+          .night-card {
+            grid-template-columns: 1fr !important;
+            padding: 10px 12px !important;
           }
         }
       </style>
@@ -1414,22 +1578,25 @@ station_c: Ermont - Eaubonne</div>
 
       const countdownText = mins !== undefined ? (mins > 0 ? `dans ${mins} min` : "départ") : "";
 
+      const platformRangeClass = (platform && platform.length > 2) ? "platform-range" : "";
+      const platformTitle = platform === "30-36" ? "Surface (Voies 30 à 36)" : (platform === "3-4" ? "Voies 3 ou 4" : `Voie ${platform}`);
+
       if (isMech) {
         html += `
           <tr class="train-row">
-            <td class="train-time" style="padding: 10px 16px;">
+            <td class="train-time" style="padding: 8px 10px;">
               <div><span class="flap-box">${time}</span></div>
-              <div style="font-family: monospace; font-size: 0.8rem; color: #a0aec0; margin-top: 4px;">(${countdownText})</div>
+              <div style="font-family: monospace; font-size: 0.75rem; color: #a0aec0; margin-top: 3px;">(${countdownText})</div>
             </td>
-            <td class="train-platform" style="padding: 12px 16px;">
-              <span class="flap-box">${platform}</span>
+            <td class="train-platform" style="padding: 8px 8px;">
+              <span class="flap-box ${platformRangeClass}" title="${platformTitle}">${platform}</span>
             </td>
-            <td style="padding: 12px 16px;">
-              <span class="flap-box" style="color: #38b6ff; margin-right: 8px;">${mission}</span>
+            <td style="padding: 8px 10px;">
+              <span class="flap-box" style="color: #38b6ff; margin-right: 6px; font-size: 0.82rem; padding: 3px 6px;">${mission}</span>
               <span class="train-dest">${dest}</span>
             </td>
-            <td style="padding: 12px 16px; text-align: right;">
-              <span class="flap-box ${statusClass}">${statusText.toUpperCase()}</span>
+            <td style="padding: 8px 10px; text-align: right;">
+              <span class="flap-box ${statusClass}" style="font-size: 0.8rem; padding: 4px 8px;">${statusText.toUpperCase()}</span>
             </td>
           </tr>
         `;
@@ -1441,11 +1608,11 @@ station_c: Ermont - Eaubonne</div>
               <div class="train-countdown">(${countdownText})</div>
             </td>
             <td>
-              <span class="train-platform">${platform}</span>
+              <span class="train-platform ${platformRangeClass}" title="${platformTitle}">${platform}</span>
             </td>
             <td class="train-dest">
               <span class="train-mission">${mission}</span>
-              <span style="margin-left: 8px;">${dest}</span>
+              <span style="margin-left: 6px;">${dest}</span>
             </td>
             <td class="train-status ${statusClass}">
               ${statusText}
@@ -1467,12 +1634,27 @@ customElements.define("domolink-transport-panel", DomolinkTransportPanel);
  * Permet d'insérer le tableau de bord directement dans n'importe quelle vue Lovelace.
  */
 class DomolinkTransportCard extends DomolinkTransportPanel {
+  constructor() {
+    super();
+    this._isCard = true;
+    this.setAttribute("is-card", "true");
+  }
+
   setConfig(config) {
-    this._config = config;
-    if (config.style) {
-      this._styleMode = config.style;
+    this._config = config || {};
+    this._isCard = true;
+    this.setAttribute("is-card", "true");
+    if (this._config.style) {
+      this._styleMode = this._config.style;
     }
   }
+
+  connectedCallback() {
+    this._isCard = true;
+    this.setAttribute("is-card", "true");
+    super.connectedCallback();
+  }
+
   getCardSize() {
     return 6;
   }
