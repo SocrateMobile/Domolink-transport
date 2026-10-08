@@ -2,11 +2,11 @@
  * DomoLink-Transport - Panneau Latéral & Carte Lovelace Officiels
  * Affiche les prochains trains et derniers retours de nuit sous forme de panneau de gare
  * (Mode Moderne Infogare TFT & Mode Mécanique Palettes Solari).
- * Version: 1.0.0
+ * Version: 1.0.1
  * Repo: https://github.com/SocrateMobile/Domolink-transport
  */
 
-const VERSION = "1.0.0";
+const VERSION = "1.0.1";
 const GITHUB_REPO = "SocrateMobile/Domolink-transport";
 
 class DomolinkTransportPanel extends HTMLElement {
@@ -19,6 +19,7 @@ class DomolinkTransportPanel extends HTMLElement {
     this._logoClickCount = 0;
     this._logoClickTimer = null;
     this._updateInfo = null;
+    this._installedVersion = VERSION;
   }
 
   set panel(panel) {
@@ -58,9 +59,15 @@ class DomolinkTransportPanel extends HTMLElement {
     if (!this._hass) return;
     try {
       const resp = await this._hass.callApi("GET", "domolink_transport/data");
-      if (resp && resp.data) {
-        this._data = resp.data;
-        this._updateDisplay();
+      if (resp) {
+        if (resp.version) {
+          this._installedVersion = resp.version;
+          this._renderUpdateBadge(Boolean(this._updateInfo));
+        }
+        if (resp.data) {
+          this._data = resp.data;
+          this._updateDisplay();
+        }
       }
     } catch (e) {
       console.warn("DomoLink-Transport fetch error:", e);
@@ -72,7 +79,6 @@ class DomolinkTransportPanel extends HTMLElement {
   _reconstructFromEntities() {
     if (!this._hass) return;
     const states = this._hass.states;
-    // Extract journeys from entities
     const a_to_b = [];
     for (let i = 1; i <= 3; i++) {
       const s = states[`sensor.domolink_transport_a_to_b_${i}`] || states[`sensor.train_traveler_eng_par_next_journey_${i}`];
@@ -119,19 +125,41 @@ class DomolinkTransportPanel extends HTMLElement {
     this._updateDisplay();
   }
 
+  _parseSemver(v) {
+    if (!v) return [0, 0, 0];
+    const clean = String(v).replace(/^[vV]/, "").trim();
+    const parts = clean.split(".").map(n => parseInt(n, 10) || 0);
+    while (parts.length < 3) parts.push(0);
+    return parts.slice(0, 3);
+  }
+
+  _isNewer(latest, current) {
+    const l = this._parseSemver(latest);
+    const c = this._parseSemver(current);
+    for (let i = 0; i < 3; i++) {
+      if (l[i] > c[i]) return true;
+      if (l[i] < c[i]) return false;
+    }
+    return false;
+  }
+
   async _checkUpdate() {
     try {
       const resp = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
       if (resp.ok) {
         const data = await resp.json();
-        const latestTag = (data.tag_name || "").replace(/^[vV]/, "");
-        if (latestTag && latestTag !== VERSION) {
+        const latestTag = (data.tag_name || "").replace(/^[vV]/, "").trim();
+        const currentVer = (this._installedVersion || VERSION).replace(/^[vV]/, "").trim();
+        if (latestTag && this._isNewer(latestTag, currentVer)) {
           this._updateInfo = {
             version: latestTag,
             body: data.body || "",
             url: data.html_url,
           };
-          this._renderUpdateBadge();
+          this._renderUpdateBadge(true);
+        } else {
+          this._updateInfo = null;
+          this._renderUpdateBadge(false);
         }
       }
     } catch (e) {
@@ -899,8 +927,12 @@ station_c: Ermont - Eaubonne</div>
       const btn = root.getElementById("btnInstallUpdate");
       btn.innerText = "⏳ Installation en cours...";
       try {
+        const updateEntities = Object.keys(this._hass.states).filter(eid =>
+          eid.startsWith("update.domolink_transport")
+        );
+        const targetEntity = updateEntities[0] || "update.domolink_transport_update";
         await this._hass.callService("update", "install", {
-          entity_id: "update.domolink_transport_update",
+          entity_id: targetEntity,
         });
       } catch (e) {
         alert("Installation lancée via le service Home Assistant.");
@@ -933,20 +965,37 @@ station_c: Ermont - Eaubonne</div>
     this._updateDisplay();
   }
 
-  _renderUpdateBadge() {
-    if (!this._updateInfo) return;
+  _renderUpdateBadge(hasUpdate = false) {
+    const currentVer = (this._installedVersion || VERSION).replace(/^[vV]/, "").trim();
     const badge = this.shadowRoot.getElementById("versionBadge");
-    badge.innerText = `v${VERSION} ➔ v${this._updateInfo.version} 🔴`;
-    badge.style.background = "rgba(255, 51, 68, 0.25)";
-    badge.style.borderColor = "#ff3344";
-    badge.style.color = "#ff3344";
-
     const btnUp = this.shadowRoot.getElementById("btnUpdate");
-    btnUp.style.display = "flex";
-    btnUp.innerText = `⬆️ Maj v${this._updateInfo.version}`;
+    if (!badge) return;
 
-    const upText = this.shadowRoot.getElementById("updateBodyText");
-    upText.innerText = this._updateInfo.body || `Une nouvelle version (${this._updateInfo.version}) est disponible.`;
+    if (hasUpdate && this._updateInfo) {
+      badge.innerText = `v${currentVer} ➔ v${this._updateInfo.version} 🔴`;
+      badge.style.background = "rgba(255, 51, 68, 0.25)";
+      badge.style.borderColor = "#ff3344";
+      badge.style.color = "#ff3344";
+
+      if (btnUp) {
+        btnUp.style.display = "flex";
+        btnUp.innerText = `⬆️ Maj v${this._updateInfo.version}`;
+      }
+
+      const upText = this.shadowRoot.getElementById("updateBodyText");
+      if (upText) {
+        upText.innerText = this._updateInfo.body || `Une nouvelle version (${this._updateInfo.version}) est disponible.`;
+      }
+    } else {
+      badge.innerText = `v${currentVer}`;
+      badge.style.background = "rgba(79, 140, 255, 0.15)";
+      badge.style.borderColor = "rgba(79, 140, 255, 0.3)";
+      badge.style.color = "#7ba6e8";
+
+      if (btnUp) {
+        btnUp.style.display = "none";
+      }
+    }
   }
 
   _updateDisplay() {
