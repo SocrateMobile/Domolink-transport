@@ -2,11 +2,11 @@
  * DomoLink-Transport - Panneau Latéral & Carte Lovelace Officiels
  * Affiche les prochains trains et derniers retours de nuit sous forme de panneau de gare
  * (Mode Moderne Infogare TFT & Mode Mécanique Palettes Solari).
- * Version: 1.0.10
+ * Version: 1.0.11
  * Repo: https://github.com/SocrateMobile/Domolink-transport
  */
 
-const VERSION = "1.0.10";
+const VERSION = "1.0.11";
 const GITHUB_REPO = "SocrateMobile/Domolink-transport";
 
 class DomolinkTransportPanel extends HTMLElement {
