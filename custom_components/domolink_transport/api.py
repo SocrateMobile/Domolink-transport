@@ -41,6 +41,7 @@ class DomolinkTransportApiClient:
         self._session = session
         self._api_key = api_key.strip() if api_key else ""
         self._prim_api_key = prim_api_key.strip() if prim_api_key else None
+        self.quota_reached: bool = False
 
     async def async_get_prim_platforms(self, station_sncf_id: str) -> dict[str, str]:
         """Fetch real-time departure platforms from IDFM PRIM SIRI Lite."""
@@ -152,9 +153,14 @@ class DomolinkTransportApiClient:
             prim_platforms = await self.async_get_prim_platforms(from_id)
 
             async with self._session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as resp:
-                if resp.status != 200:
+                if resp.status == 429:
+                    self.quota_reached = True
+                    _LOGGER.warning("DomoLink-Transport : Quota quotidien API SNCF (5000/j) atteint.")
+                    return []
+                elif resp.status != 200:
                     _LOGGER.warning("Erreur API SNCF journeys (%s -> %s): HTTP %s", from_id, to_id, resp.status)
                     return []
+                self.quota_reached = False
                 data = await resp.json()
                 journeys = data.get("journeys", [])
                 parsed = [self._parse_journey(j, from_id, to_id, prim_platforms) for j in journeys]
@@ -196,9 +202,13 @@ class DomolinkTransportApiClient:
             prim_platforms = await self.async_get_prim_platforms(from_id)
 
             async with self._session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as resp:
-                if resp.status != 200:
+                if resp.status == 429:
+                    self.quota_reached = True
+                    return None
+                elif resp.status != 200:
                     _LOGGER.warning("Erreur API dernier train (%s -> %s): HTTP %s", from_id, to_id, resp.status)
                     return None
+                self.quota_reached = False
                 data = await resp.json()
                 journeys = data.get("journeys", [])
                 if not journeys:
@@ -259,8 +269,11 @@ class DomolinkTransportApiClient:
 
         try:
             async with self._session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=6)) as resp:
-                if resp.status != 200:
-                    return []
+                if resp.status == 429:
+                    self.quota_reached = True
+                    return None
+                elif resp.status != 200:
+                    return None
                 data = await resp.json()
                 disruptions = []
                 for d in data.get("disruptions", []):

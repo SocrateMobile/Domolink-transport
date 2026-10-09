@@ -38,7 +38,7 @@ CONF_ENABLE_PANEL = "enable_panel"
 CONF_CREATE_LEGACY_ENTITIES = "create_legacy_entities"
 
 # Defaults
-DEFAULT_SCAN_INTERVAL = 120  # seconds
+DEFAULT_SCAN_INTERVAL = 180  # seconds (3 min pour préserver le quota 5000/j)
 DEFAULT_STATION_A_NAME = "Enghien-les-Bains"
 DEFAULT_STATION_A_ID = "stop_area:SNCF:87276022"
 
