@@ -107,7 +107,7 @@ class DomolinkTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_STATION_C_ID: st_c_id,
                     CONF_SCAN_INTERVAL: user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
                     CONF_CREATE_LEGACY_ENTITIES: user_input.get(CONF_CREATE_LEGACY_ENTITIES, True),
-                    CONF_ENABLE_PANEL: True,
+                    CONF_ENABLE_PANEL: user_input.get(CONF_ENABLE_PANEL, True),
                 }
 
                 await self.async_set_unique_id(f"{DOMAIN}_{st_a_id}")
@@ -126,6 +126,7 @@ class DomolinkTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required(CONF_STATION_C, default=DEFAULT_STATION_C_NAME): cv.string,
             vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.positive_int,
             vol.Optional(CONF_CREATE_LEGACY_ENTITIES, default=True): cv.boolean,
+            vol.Optional(CONF_ENABLE_PANEL, default=True): cv.boolean,
         })
 
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
