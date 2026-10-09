@@ -2,11 +2,11 @@
  * DomoLink-Transport - Panneau Latéral & Carte Lovelace Officiels
  * Affiche les prochains trains et derniers retours de nuit sous forme de panneau de gare
  * (Mode Moderne Infogare TFT & Mode Mécanique Palettes Solari).
- * Version: 1.0.7
+ * Version: 1.0.8
  * Repo: https://github.com/SocrateMobile/Domolink-transport
  */
 
-const VERSION = "1.0.7";
+const VERSION = "1.0.8";
 const GITHUB_REPO = "SocrateMobile/Domolink-transport";
 
 class DomolinkTransportPanel extends HTMLElement {
@@ -1532,12 +1532,16 @@ station_c: Ermont - Eaubonne</div>
       if (root.getElementById("cardNightDescCtoA")) root.getElementById("cardNightDescCtoA").innerText = "Coupure nocturne en cours";
     }
 
-    // Ticker disruptions
+    // Ticker disruptions & quota
     const disruptions = data.disruptions || [];
     const tickerBadge = root.getElementById("tickerBadge");
     const tickerContent = root.getElementById("tickerContent");
 
-    if (disruptions.length > 0) {
+    if (data.quota_reached) {
+      tickerBadge.className = "ticker-badge disrupted";
+      tickerBadge.innerText = "Quota SNCF 5000/j";
+      tickerContent.innerText = "Quota journalier atteint (5000 requêtes). Données en cache affichées. Réinitialisation cette nuit (ou changez la clé dans les Options).";
+    } else if (disruptions.length > 0) {
       tickerBadge.className = "ticker-badge disrupted";
       tickerBadge.innerText = `Ligne H • ${disruptions.length} Perturbation(s)`;
       tickerContent.innerText = disruptions.map(d => d.message).join(" | ");
