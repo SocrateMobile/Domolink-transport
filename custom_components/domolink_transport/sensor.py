@@ -199,6 +199,8 @@ class DomolinkLastReturnSensor(DomolinkTransportBaseSensor):
         if not j:
             return {"status": "Aucun train nocturne trouvé"}
         return {
+            "departure_time": j.get("departure_time"),
+            "departure_time_str": j.get("departure_time_str"),
             "minutes_remaining": j.get("minutes_remaining"),
             "platform": j.get("platform"),
             "voie": j.get("platform"),
@@ -208,6 +210,7 @@ class DomolinkLastReturnSensor(DomolinkTransportBaseSensor):
             "mission": j.get("headsign"),
             "duration_minutes": j.get("duration_minutes"),
             "arrival_time": j.get("arrival_time"),
+            "arrival_time_str": j.get("arrival_time_str"),
             "physical_mode": j.get("physical_mode"),
             "status_label": j.get("status_label"),
         }
