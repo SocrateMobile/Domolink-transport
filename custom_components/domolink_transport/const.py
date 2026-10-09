@@ -14,7 +14,7 @@ except Exception:
 GITHUB_REPO = "SocrateMobile/Domolink-transport"
 GITHUB_LATEST_RELEASE_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
-PLATFORMS = ["sensor", "binary_sensor", "update", "switch"]
+PLATFORMS = ["sensor", "binary_sensor", "update", "switch", "button"]
 
 # Sidebar Panel
 PANEL_NAME = "domolink-transport-panel"
