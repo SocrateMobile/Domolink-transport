@@ -119,7 +119,7 @@ class DomolinkTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
 
         schema = vol.Schema({
-            vol.Required(CONF_API_KEY, default="8c300d94-7c4e-43c8-a14f-a13df543adf8"): cv.string,
+            vol.Required(CONF_API_KEY): cv.string,
             vol.Optional(CONF_PRIM_API_KEY, default=""): cv.string,
             vol.Required(CONF_STATION_A, default=DEFAULT_STATION_A_NAME): cv.string,
             vol.Required(CONF_STATION_B, default=DEFAULT_STATION_B_NAME): cv.string,

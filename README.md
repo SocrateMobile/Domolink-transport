@@ -39,7 +39,7 @@ L'API SNCF permet de récupérer l'ensemble des trajets, horaires théoriques et
 2. Cliquez sur **Créer un compte / S'inscrire** (gratuit).
 3. Une fois connecté, accédez à votre profil / espace développeur :
    * Générez un nouveau **Jeton d'authentification (API Token)**.
-4. Votre clé ressemble à un UUID (ex: `8c300d94-7c4e-43c8-a14f-a13df543adf8`).
+4. Votre clé ressemble à un UUID (ex: `12345678-abcd-1234-ef01-123456789abc`).
 5. Copiez cette clé et conservez-la pour l'étape de configuration dans Home Assistant.
 
 ---
