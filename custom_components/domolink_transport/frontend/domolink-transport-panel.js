@@ -2,11 +2,11 @@
  * DomoLink-Transport - Panneau Latéral & Carte Lovelace Officiels
  * Affiche les prochains trains et derniers retours de nuit sous forme de panneau de gare
  * (Mode Moderne Infogare TFT & Mode Mécanique Palettes Solari).
- * Version: 1.0.6
+ * Version: 1.0.7
  * Repo: https://github.com/SocrateMobile/Domolink-transport
  */
 
-const VERSION = "1.0.6";
+const VERSION = "1.0.7";
 const GITHUB_REPO = "SocrateMobile/Domolink-transport";
 
 class DomolinkTransportPanel extends HTMLElement {
@@ -1486,7 +1486,7 @@ station_c: Ermont - Eaubonne</div>
       }
       root.getElementById("nightTimeBtoA").innerText = retB.departure_time_str;
       root.getElementById("nightPlatformBtoA").innerText = `Voie ${retB.platform || '-'}`;
-      root.getElementById("nightDetailsBtoA").innerText = `Dernier train avant coupure • Ligne ${retB.line || 'H'} (${retB.headsign || 'Mission'})${arrStr} ${countdownPart}`;
+      root.getElementById("nightDetailsBtoA").innerText = `Dernier train ce soir avant coupure • Ligne ${retB.line || 'H'} (${retB.headsign || 'Mission'})${arrStr} ${countdownPart}`;
 
       if (root.getElementById("cardNightTimeBtoA")) root.getElementById("cardNightTimeBtoA").innerText = retB.departure_time_str;
       if (root.getElementById("cardNightPlatBtoA")) root.getElementById("cardNightPlatBtoA").innerText = `Voie ${retB.platform || '-'}`;
@@ -1517,7 +1517,7 @@ station_c: Ermont - Eaubonne</div>
       }
       root.getElementById("nightTimeCtoA").innerText = retC.departure_time_str;
       root.getElementById("nightPlatformCtoA").innerText = `Voie ${retC.platform || '-'}`;
-      root.getElementById("nightDetailsCtoA").innerText = `Dernier train avant coupure • Ligne ${retC.line || 'H'} (${retC.headsign || 'Mission'})${arrStr} ${countdownPart}`;
+      root.getElementById("nightDetailsCtoA").innerText = `Dernier train ce soir avant coupure • Ligne ${retC.line || 'H'} (${retC.headsign || 'Mission'})${arrStr} ${countdownPart}`;
 
       if (root.getElementById("cardNightTimeCtoA")) root.getElementById("cardNightTimeCtoA").innerText = retC.departure_time_str;
       if (root.getElementById("cardNightPlatCtoA")) root.getElementById("cardNightPlatCtoA").innerText = `Voie ${retC.platform || '-'}`;

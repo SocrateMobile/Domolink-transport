@@ -15,6 +15,19 @@ _LOGGER = logging.getLogger(__name__)
 TZ_PARIS = zoneinfo.ZoneInfo("Europe/Paris")
 
 
+SNCF_TO_PRIM_STOP_AREAS = {
+    "87271007": "STIF:StopArea:SP:462394:",  # Paris Nord
+    "87276022": "STIF:StopArea:SP:43075:",   # Enghien-les-Bains
+    "87276055": "STIF:StopArea:SP:47898:",   # Ermont - Eaubonne
+    "87276006": "STIF:StopArea:SP:43178:",   # Persan - Beaumont
+    "87276139": "STIF:StopArea:SP:43168:",   # Pontoise
+    "87276113": "STIF:StopArea:SP:43085:",   # Saint-Leu-la-Forêt
+    "87276121": "STIF:StopArea:SP:43093:",   # Valmondois
+    "87276063": "STIF:StopArea:SP:43078:",   # Cernay
+    "87276071": "STIF:StopArea:SP:43080:",   # Franconville
+}
+
+
 class DomolinkTransportApiClient:
     """Client for fetching journeys, departures, platforms and disruptions."""
 
@@ -28,6 +41,61 @@ class DomolinkTransportApiClient:
         self._session = session
         self._api_key = api_key.strip() if api_key else ""
         self._prim_api_key = prim_api_key.strip() if prim_api_key else None
+
+    async def async_get_prim_platforms(self, station_sncf_id: str) -> dict[str, str]:
+        """Fetch real-time departure platforms from IDFM PRIM SIRI Lite."""
+        if not self._prim_api_key:
+            return {}
+
+        uic = station_sncf_id.split(":")[-1] if ":" in station_sncf_id else station_sncf_id
+        monitoring_ref = SNCF_TO_PRIM_STOP_AREAS.get(uic)
+        if not monitoring_ref:
+            return {}
+
+        url = f"{PRIM_API_URL}/stop-monitoring"
+        params = {"MonitoringRef": monitoring_ref}
+        headers = {
+            "apikey": self._prim_api_key,
+            "Accept": "application/json",
+        }
+
+        try:
+            async with self._session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                if resp.status != 200:
+                    return {}
+                data = await resp.json()
+                deliveries = data.get("Siri", {}).get("ServiceDelivery", {}).get("StopMonitoringDelivery", [])
+                if not deliveries:
+                    return {}
+                visits = deliveries[0].get("MonitoredStopVisit", [])
+                platforms = {}
+                for v in visits:
+                    mvj = v.get("MonitoredVehicleJourney", {})
+                    line_val = mvj.get("LineRef", {}).get("value", "")
+                    if line_val and "C01737" not in line_val:
+                        continue
+
+                    mission = mvj.get("JourneyNote", [{}])[0].get("value") if mvj.get("JourneyNote") else ""
+                    call = mvj.get("MonitoredCall", {})
+                    dep_plat = call.get("DeparturePlatformName", {}).get("value")
+                    arr_plat = call.get("ArrivalPlatformName", {}).get("value")
+                    plat = dep_plat or arr_plat
+
+                    if plat and plat != "unknown":
+                        aim = call.get("AimedDepartureTime") or call.get("ExpectedDepartureTime")
+                        if aim:
+                            try:
+                                dt = datetime.fromisoformat(aim.replace("Z", "+00:00")).astimezone(TZ_PARIS)
+                                hhmm = dt.strftime("%H:%M")
+                                if mission:
+                                    platforms[f"{hhmm}_{mission}"] = plat
+                                platforms[hhmm] = plat
+                            except Exception:
+                                pass
+                return platforms
+        except Exception as err:
+            _LOGGER.debug("Erreur PRIM stop-monitoring pour %s: %s", monitoring_ref, err)
+            return {}
 
     async def async_search_station(self, query: str) -> list[dict[str, str]]:
         """Search for station stop_areas by text."""
@@ -80,13 +148,16 @@ class DomolinkTransportApiClient:
         headers = {"Authorization": self._api_key}
 
         try:
+            # Récupérer les quais temps réel PRIM en parallèle si disponible
+            prim_platforms = await self.async_get_prim_platforms(from_id)
+
             async with self._session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as resp:
                 if resp.status != 200:
                     _LOGGER.warning("Erreur API SNCF journeys (%s -> %s): HTTP %s", from_id, to_id, resp.status)
                     return []
                 data = await resp.json()
                 journeys = data.get("journeys", [])
-                parsed = [self._parse_journey(j, from_id, to_id) for j in journeys]
+                parsed = [self._parse_journey(j, from_id, to_id, prim_platforms) for j in journeys]
                 # Filter out past journeys if diff < 0
                 valid = [p for p in parsed if p is not None]
                 return valid[:count]
@@ -114,14 +185,16 @@ class DomolinkTransportApiClient:
         params = {
             "from": from_id,
             "to": to_id,
-            "from_datetime": from_datetime,
+            "datetime": from_datetime,
             "datetime_represents": "departure",
-            "min_nb_journeys": 20,
+            "min_nb_journeys": 25,
             "data_freshness": "realtime",
         }
         headers = {"Authorization": self._api_key}
 
         try:
+            prim_platforms = await self.async_get_prim_platforms(from_id)
+
             async with self._session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as resp:
                 if resp.status != 200:
                     _LOGGER.warning("Erreur API dernier train (%s -> %s): HTTP %s", from_id, to_id, resp.status)
@@ -173,7 +246,7 @@ class DomolinkTransportApiClient:
                         last_raw = night_trains[-1]
 
                 if last_raw:
-                    return self._parse_journey(last_raw, from_id, to_id)
+                    return self._parse_journey(last_raw, from_id, to_id, prim_platforms)
                 return None
         except Exception as err:
             _LOGGER.error("Exception API dernier train (%s -> %s): %s", from_id, to_id, err)
@@ -213,7 +286,13 @@ class DomolinkTransportApiClient:
             _LOGGER.debug("Erreur récupération disruptions: %s", err)
             return []
 
-    def _parse_journey(self, journey: dict[str, Any], from_id: str, to_id: str) -> dict[str, Any] | None:
+    def _parse_journey(
+        self,
+        journey: dict[str, Any],
+        from_id: str,
+        to_id: str,
+        prim_platforms: dict[str, str] | None = None,
+    ) -> dict[str, Any] | None:
         """Parse raw journey into clean structured format."""
         try:
             dep_str = journey.get("departure_date_time")
@@ -247,7 +326,7 @@ class DomolinkTransportApiClient:
                     headsign = disp.get("headsign") or "TRAIN"
                     physical_mode = disp.get("physical_mode") or "RER / Transilien"
 
-                    # Platform detection in stop_point or stop_date_times
+                    # 1. Platform detection in stop_point or stop_date_times (SNCF API)
                     st_point = sec.get("from", {}).get("stop_point", {})
                     if st_point.get("platform"):
                         platform = str(st_point.get("platform"))
@@ -271,7 +350,14 @@ class DomolinkTransportApiClient:
                 except Exception:
                     pass
 
-            # Inférence intelligente de voie pour la gare d'Enghien si non fournie par l'API
+            # 2. Voie temps réel issue d'IDFM PRIM si disponible
+            if not platform and prim_platforms:
+                hhmm = dep_dt.strftime("%H:%M")
+                p = prim_platforms.get(f"{hhmm}_{headsign}") or prim_platforms.get(hhmm)
+                if p:
+                    platform = str(p)
+
+            # 3. Inférence intelligente de voie si non fournie par SNCF ni PRIM
             if not platform:
                 # Enghien-les-Bains : Voie 2 vers Paris, Voie 1 vers Ermont/Pontoise
                 if "87276022" in from_id:
@@ -283,8 +369,8 @@ class DomolinkTransportApiClient:
                     # Départ de Paris Nord (Surface Ligne H = Voies 30-36)
                     platform = "30-36"
                 elif "87276055" in from_id:
-                    # Départ d'Ermont - Eaubonne vers Paris/Enghien (Voies 3-4)
-                    platform = "3-4"
+                    # Départ d'Ermont - Eaubonne vers Paris/Enghien (Voies 4-6)
+                    platform = "4-6"
                 else:
                     platform = "-"
 
