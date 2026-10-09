@@ -1360,15 +1360,29 @@ station_c: Ermont - Eaubonne</div>
       const btn = root.getElementById("btnInstallUpdate");
       btn.innerText = "⏳ Installation en cours...";
       try {
+        // Priorité à l'entité native domolink_transport_systeme puis domolink_transport
         const updateEntities = Object.keys(this._hass.states).filter(eid =>
           eid.startsWith("update.domolink_transport")
         );
-        const targetEntity = updateEntities[0] || "update.domolink_transport_update";
+        const targetEntity = updateEntities.find(e => e.includes("systeme")) || updateEntities[0] || "update.domolink_transport_systeme_mise_a_jour_domolink_transport";
+        const stateObj = this._hass.states[targetEntity];
+        if (stateObj && stateObj.state === "off" && stateObj.attributes.installed_version === stateObj.attributes.latest_version) {
+          btn.innerText = "✅ Déjà à jour !";
+          setTimeout(() => {
+            root.getElementById("modalUpdate").classList.remove("open");
+            this._renderUpdateBadge(false);
+          }, 1000);
+          return;
+        }
         await this._hass.callService("update", "install", {
           entity_id: targetEntity,
         });
       } catch (e) {
-        alert("Installation lancée via le service Home Assistant.");
+        console.warn("Erreur install update:", e);
+        btn.innerText = "⚠️ Échec de l'installation";
+        setTimeout(() => {
+          btn.innerText = "Installer la mise à jour maintenant & Redémarrer";
+        }, 3000);
       }
     });
 
