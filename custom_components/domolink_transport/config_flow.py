@@ -11,7 +11,12 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
 from .api import DomolinkTransportApiClient
 from .const import (
@@ -34,7 +39,9 @@ from .const import (
     DEFAULT_STATION_C_ID,
     DEFAULT_STATION_C_NAME,
     DOMAIN,
+    KNOWN_STATION_IDS,
     NAME,
+    POPULAR_STATIONS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -48,6 +55,10 @@ async def _resolve_station(api: DomolinkTransportApiClient, name_or_id: str, def
 
     if clean.startswith("stop_area:"):
         return clean, clean
+
+    # Fast lookup from pre-mapped stations
+    if clean in KNOWN_STATION_IDS:
+        return clean, KNOWN_STATION_IDS[clean]
 
     # Search via API
     results = await api.async_search_station(clean)
@@ -118,12 +129,22 @@ class DomolinkTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data=data,
                 )
 
+        def _build_station_selector(default_val: str) -> SelectSelector:
+            options = sorted(list(set(POPULAR_STATIONS + ([default_val] if default_val else []))))
+            return SelectSelector(
+                SelectSelectorConfig(
+                    options=options,
+                    custom_value=True,
+                    mode=SelectSelectorMode.DROPDOWN,
+                )
+            )
+
         schema = vol.Schema({
             vol.Required(CONF_API_KEY): cv.string,
             vol.Optional(CONF_PRIM_API_KEY, default=""): cv.string,
-            vol.Required(CONF_STATION_A, default=DEFAULT_STATION_A_NAME): cv.string,
-            vol.Required(CONF_STATION_B, default=DEFAULT_STATION_B_NAME): cv.string,
-            vol.Required(CONF_STATION_C, default=DEFAULT_STATION_C_NAME): cv.string,
+            vol.Required(CONF_STATION_A, default=DEFAULT_STATION_A_NAME): _build_station_selector(DEFAULT_STATION_A_NAME),
+            vol.Required(CONF_STATION_B, default=DEFAULT_STATION_B_NAME): _build_station_selector(DEFAULT_STATION_B_NAME),
+            vol.Required(CONF_STATION_C, default=DEFAULT_STATION_C_NAME): _build_station_selector(DEFAULT_STATION_C_NAME),
             vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.positive_int,
             vol.Optional(CONF_CREATE_LEGACY_ENTITIES, default=True): cv.boolean,
             vol.Optional(CONF_ENABLE_PANEL, default=True): cv.boolean,
@@ -195,13 +216,26 @@ class DomolinkTransportOptionsFlow(config_entries.OptionsFlow):
             return self.async_create_entry(title="", data=options)
 
         cur_data = {**self.config_entry.data, **self.config_entry.options}
+        st_a = cur_data.get(CONF_STATION_A, DEFAULT_STATION_A_NAME)
+        st_b = cur_data.get(CONF_STATION_B, DEFAULT_STATION_B_NAME)
+        st_c = cur_data.get(CONF_STATION_C, DEFAULT_STATION_C_NAME)
+
+        def _build_opt_station_selector(current_val: str) -> SelectSelector:
+            options = sorted(list(set(POPULAR_STATIONS + ([current_val] if current_val else []))))
+            return SelectSelector(
+                SelectSelectorConfig(
+                    options=options,
+                    custom_value=True,
+                    mode=SelectSelectorMode.DROPDOWN,
+                )
+            )
 
         schema = vol.Schema({
             vol.Required(CONF_API_KEY, default=cur_data.get(CONF_API_KEY, "")): cv.string,
             vol.Optional(CONF_PRIM_API_KEY, default=cur_data.get(CONF_PRIM_API_KEY, "") or ""): cv.string,
-            vol.Required(CONF_STATION_A, default=cur_data.get(CONF_STATION_A, DEFAULT_STATION_A_NAME)): cv.string,
-            vol.Required(CONF_STATION_B, default=cur_data.get(CONF_STATION_B, DEFAULT_STATION_B_NAME)): cv.string,
-            vol.Required(CONF_STATION_C, default=cur_data.get(CONF_STATION_C, DEFAULT_STATION_C_NAME)): cv.string,
+            vol.Required(CONF_STATION_A, default=st_a): _build_opt_station_selector(st_a),
+            vol.Required(CONF_STATION_B, default=st_b): _build_opt_station_selector(st_b),
+            vol.Required(CONF_STATION_C, default=st_c): _build_opt_station_selector(st_c),
             vol.Optional(CONF_SCAN_INTERVAL, default=cur_data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)): cv.positive_int,
             vol.Optional(CONF_CREATE_LEGACY_ENTITIES, default=cur_data.get(CONF_CREATE_LEGACY_ENTITIES, True)): cv.boolean,
             vol.Optional(CONF_ENABLE_PANEL, default=cur_data.get(CONF_ENABLE_PANEL, True)): cv.boolean,
