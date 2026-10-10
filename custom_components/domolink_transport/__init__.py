@@ -44,6 +44,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data[DOMAIN][entry.entry_id] = {
         "coordinator": coordinator,
+        "last_reload_options": {k: v for k, v in entry.options.items() if k != CONF_ENABLE_PANEL},
     }
 
     # 1. Register static frontend path
@@ -171,6 +172,20 @@ async def _async_register_lovelace_resource(hass: HomeAssistant) -> None:
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload integration when options change."""
+    entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
+    last_reload_options = entry_data.get("last_reload_options")
+    current_options = {k: v for k, v in entry.options.items() if k != CONF_ENABLE_PANEL}
+
+    if last_reload_options is not None and current_options == last_reload_options:
+        # Seul le panneau latéral (CONF_ENABLE_PANEL) a changé : pas besoin de recharger toutes les plateformes
+        enable_panel = entry.options.get(CONF_ENABLE_PANEL, entry.data.get(CONF_ENABLE_PANEL, True))
+        if enable_panel:
+            _async_register_panel(hass)
+        else:
+            _async_remove_panel(hass)
+        return
+
+    entry_data["last_reload_options"] = current_options
     await hass.config_entries.async_reload(entry.entry_id)
 
 
