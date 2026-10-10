@@ -26,6 +26,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_time_interval
 
 from .const import (
+    CONF_ENABLE_PANEL,
     DOMAIN,
     FRONTEND_FILE_NAME,
     FRONTEND_URL_PATH,
@@ -157,6 +158,12 @@ class DomolinkTransportUpdateEntity(UpdateEntity):
 
     def _update_sidebar_panel(self, update_available: bool) -> None:
         """Update sidebar badge if update available."""
+        enable_panel = self.entry.options.get(
+            CONF_ENABLE_PANEL, self.entry.data.get(CONF_ENABLE_PANEL, True)
+        )
+        if not enable_panel:
+            return
+
         try:
             title = f"{PANEL_TITLE} 🔴" if update_available else PANEL_TITLE
             icon = "mdi:alert-decagram" if update_available else PANEL_ICON
