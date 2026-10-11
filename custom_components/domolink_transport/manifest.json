@@ -1,17 +1,17 @@
 {
-  "domain": "domolink_transport",
-  "name": "DomoLink-Transport",
   "codeowners": [
     "@SocrateMobile"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/SocrateMobile/Domolink-transport",
-  "issue_tracker": "https://github.com/SocrateMobile/Domolink-transport/issues",
-  "version": "1.0.14",
-  "iot_class": "cloud_polling",
   "dependencies": [
     "frontend",
     "http"
   ],
-  "requirements": []
+  "documentation": "https://github.com/SocrateMobile/Domolink-transport",
+  "domain": "domolink_transport",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/SocrateMobile/Domolink-transport/issues",
+  "name": "DomoLink-Transport",
+  "requirements": [],
+  "version": "1.0.15"
 }
