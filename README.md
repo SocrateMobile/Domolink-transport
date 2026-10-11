@@ -122,3 +122,13 @@ Si vous utilisez des écrans **openHASP** (WT32-SC01, Sunton 7", etc.), l'intég
 
 Développé par **SocrateMobile** dans le cadre de la suite **DomoLink**.  
 Licence MIT.
+
+---
+
+## ☕ Soutenir le projet / Support
+
+Si vous appréciez cette intégration et souhaitez soutenir son développement continu ainsi que la maintenance des futures versions :
+
+<a href="https://buymeacoffee.com/Socrate" target="_blank">
+  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="50" width="210">
+</a>
