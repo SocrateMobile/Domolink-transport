@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timedelta
 import logging
+import re
 from typing import Any
 import zoneinfo
 
@@ -295,10 +296,18 @@ class DomolinkTransportApiClient:
                             messages.append(m.get("text"))
                     full_text = " ".join(messages)
                     full_text_lower = full_text.lower()
-                    if any(
-                        code.lower() in full_text_lower or f"ligne {code.lower()}" in full_text_lower
-                        for code in line_codes
-                    ):
+                    matched = False
+                    for code in line_codes:
+                        c_lower = code.lower()
+                        if (
+                            f"ligne {c_lower}" in full_text_lower
+                            or f"rer {c_lower}" in full_text_lower
+                            or f"train {c_lower}" in full_text_lower
+                            or re.search(rf"\b{re.escape(code)}\b", full_text, re.IGNORECASE)
+                        ):
+                            matched = True
+                            break
+                    if matched:
                         disruptions.append({
                             "id": d.get("id"),
                             "severity": d.get("severity", {}).get("name", "Information"),

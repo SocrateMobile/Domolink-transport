@@ -1,6 +1,6 @@
 DOMAIN = "domolink_transport"
 NAME = "DomoLink-Transport"
-VERSION = "1.0.18"
+VERSION = "1.0.19"
 
 GITHUB_REPO = "SocrateMobile/Domolink-transport"
 GITHUB_LATEST_RELEASE_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"

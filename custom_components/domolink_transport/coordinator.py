@@ -144,20 +144,16 @@ class DomolinkTransportCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 or (now - self._disruptions_cache_time).total_seconds() > 900
             ):
                 detected_lines = set()
-                for train in trains_a_to_b + trains_b_to_a:
+                for train in (a_to_b or []) + (a_to_c or []) + (b_to_a or []) + (c_to_a or []):
                     if isinstance(train, dict) and train.get("line"):
                         detected_lines.add(str(train["line"]))
                 if not detected_lines:
                     detected_lines.add("H")
 
-                all_disruptions = []
-                for line_code in detected_lines:
-                    line_disr = await self.api.async_get_line_disruptions(line_code)
-                    if line_disr:
-                        all_disruptions.extend(line_disr)
-
-                self._cached_disruptions = all_disruptions
-                self._disruptions_cache_time = now
+                line_disr = await self.api.async_get_line_disruptions(detected_lines)
+                if line_disr is not None:
+                    self._cached_disruptions = line_disr
+                    self._disruptions_cache_time = now
 
             disruptions = self._cached_disruptions
 
