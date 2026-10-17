@@ -262,10 +262,17 @@ class DomolinkTransportApiClient:
             _LOGGER.error("Exception API dernier train (%s -> %s): %s", from_id, to_id, err)
             return None
 
-    async def async_get_line_disruptions(self, line_code: str = "H") -> list[dict[str, Any]]:
-        """Fetch active disruptions for a specific line."""
+    async def async_get_line_disruptions(
+        self, line_code: str | list[str] | set[str] | tuple[str, ...] = "H"
+    ) -> list[dict[str, Any]] | None:
+        """Fetch active disruptions for one or more lines."""
         url = f"{SNCF_API_URL}/coverage/sncf/disruptions"
         headers = {"Authorization": self._api_key}
+
+        if isinstance(line_code, str):
+            line_codes = [line_code.strip()] if line_code.strip() else ["H"]
+        else:
+            line_codes = [str(c).strip() for c in line_code if str(c).strip()] or ["H"]
 
         try:
             async with self._session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=6)) as resp:
@@ -274,19 +281,24 @@ class DomolinkTransportApiClient:
                     return None
                 elif resp.status != 200:
                     return None
+                self.quota_reached = False
                 data = await resp.json()
                 disruptions = []
                 for d in data.get("disruptions", []):
                     status = d.get("status")
                     if status not in ("active", "current", "future", "past"):
                         continue
-                    # Check if relevant to line
+                    # Check if relevant to any of the detected lines
                     messages = []
                     for m in d.get("messages", []):
                         if m.get("text"):
                             messages.append(m.get("text"))
                     full_text = " ".join(messages)
-                    if line_code.lower() in full_text.lower() or f"ligne {line_code.lower()}" in full_text.lower():
+                    full_text_lower = full_text.lower()
+                    if any(
+                        code.lower() in full_text_lower or f"ligne {code.lower()}" in full_text_lower
+                        for code in line_codes
+                    ):
                         disruptions.append({
                             "id": d.get("id"),
                             "severity": d.get("severity", {}).get("name", "Information"),
