@@ -49,7 +49,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # 1. Register static frontend path
     frontend_dir = os.path.join(os.path.dirname(__file__), "frontend")
-    if os.path.exists(frontend_dir):
+    if True:
         if hasattr(hass.http, "async_register_static_paths"):
             from homeassistant.components.http import StaticPathConfig
             await hass.http.async_register_static_paths([
