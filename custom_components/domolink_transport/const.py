@@ -9,7 +9,7 @@ try:
     with open(_MANIFEST_PATH, "r", encoding="utf-8") as _f:
         VERSION = json.load(_f).get("version", "1.0.23")
 except Exception:
-    VERSION = "1.0.26"
+    VERSION = "1.0.27"
 
 PLATFORMS = ["sensor", "binary_sensor", "switch", "button"]
 
