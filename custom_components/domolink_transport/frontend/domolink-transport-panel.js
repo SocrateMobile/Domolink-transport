@@ -6,7 +6,7 @@
  * Repo: https://github.com/SocrateMobile/Domolink-transport
  */
 
-const VERSION = "1.0.24";
+const VERSION = "1.0.25";
 const GITHUB_REPO = "SocrateMobile/Domolink-transport";
 
 class DomolinkTransportPanel extends HTMLElement {
@@ -1644,12 +1644,31 @@ station_c: Ermont - Eaubonne</div>
   }
 }
 
-customElements.define("domolink-transport-panel", DomolinkTransportPanel);
+if (!customElements.get("domolink-transport-panel")) {
+  customElements.define("domolink-transport-panel", DomolinkTransportPanel);
+}
 
 
 class DomolinkTransportCardEditor extends HTMLElement {
   setConfig(config) {
     this._config = config || {};
+    this.render();
+  }
+
+  set config(config) {
+    this._config = config || {};
+    this.render();
+  }
+
+  get config() {
+    return this._config;
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+  }
+
+  render() {
     this.innerHTML = `
       <div style="padding: 16px; font-family: inherit;">
         <label style="display:block; margin-bottom: 8px; font-weight: bold; font-size: 14px;">Style du panneau d'affichage</label>
@@ -1699,10 +1718,22 @@ class DomolinkTransportCard extends DomolinkTransportPanel {
     }
   }
 
+  set config(config) {
+    this.setConfig(config);
+  }
+
+  get config() {
+    return this._config;
+  }
+
   set hass(hass) {
     this._isCard = true;
     this.setAttribute("is-card", "true");
     super.hass = hass;
+  }
+
+  get hass() {
+    return this._hass;
   }
 
   connectedCallback() {
