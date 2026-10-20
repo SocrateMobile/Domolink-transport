@@ -20,6 +20,7 @@ GITHUB_REPO = f"{REPO_OWNER}/{REPO_NAME}"
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 MANIFEST_PATH = os.path.join(ROOT_DIR, "custom_components", "domolink_transport", "manifest.json")
 CONST_PATH = os.path.join(ROOT_DIR, "custom_components", "domolink_transport", "const.py")
+PANEL_PATH = os.path.join(ROOT_DIR, "custom_components", "domolink_transport", "frontend", "domolink-transport-panel.js")
 README_PATH = os.path.join(ROOT_DIR, "README.md")
 
 
@@ -97,7 +98,20 @@ def update_version_files(new_ver: str) -> None:
             f.write(content)
         print(f"Updated {CONST_PATH} -> {new_ver}")
 
-    # 3. README.md (Badge GitHub)
+    # 3. frontend panel js
+    if os.path.exists(PANEL_PATH):
+        with open(PANEL_PATH, "r", encoding="utf-8") as f:
+            panel_content = f.read()
+        panel_content = re.sub(
+            r'const VERSION = "[^"]+";',
+            f'const VERSION = "{new_ver}";',
+            panel_content,
+        )
+        with open(PANEL_PATH, "w", encoding="utf-8") as f:
+            f.write(panel_content)
+        print(f"Updated {PANEL_PATH} -> {new_ver}")
+
+    # 4. README.md (Badge GitHub)
     if os.path.exists(README_PATH):
         with open(README_PATH, "r", encoding="utf-8") as f:
             readme_content = f.read()
