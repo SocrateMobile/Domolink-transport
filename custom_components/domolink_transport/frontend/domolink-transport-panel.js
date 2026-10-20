@@ -6,7 +6,7 @@
  * Repo: https://github.com/SocrateMobile/Domolink-transport
  */
 
-const VERSION = "1.0.25";
+const VERSION = "1.0.26";
 const GITHUB_REPO = "SocrateMobile/Domolink-transport";
 
 class DomolinkTransportPanel extends HTMLElement {
@@ -24,6 +24,15 @@ class DomolinkTransportPanel extends HTMLElement {
 
   set panel(panel) {
     this._panel = panel;
+  }
+
+  setConfig(config) {
+    this._config = config || {};
+    this._isCard = true;
+    this.setAttribute("is-card", "true");
+    if (this._config.style) {
+      this._styleMode = this._config.style;
+    }
   }
 
   set hass(hass) {
@@ -1647,52 +1656,8 @@ station_c: Ermont - Eaubonne</div>
 if (!customElements.get("domolink-transport-panel")) {
   customElements.define("domolink-transport-panel", DomolinkTransportPanel);
 }
-
-
-class DomolinkTransportCardEditor extends HTMLElement {
-  setConfig(config) {
-    this._config = config || {};
-    this.render();
-  }
-
-  set config(config) {
-    this._config = config || {};
-    this.render();
-  }
-
-  get config() {
-    return this._config;
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-  }
-
-  render() {
-    this.innerHTML = `
-      <div style="padding: 16px; font-family: inherit;">
-        <label style="display:block; margin-bottom: 8px; font-weight: bold; font-size: 14px;">Style du panneau d'affichage</label>
-        <select id="styleSelect" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--divider-color, #ccc); background: var(--card-background-color, #fff); color: var(--primary-text-color, #000); font-size: 14px;">
-          <option value="modern" ${(!this._config.style || this._config.style === "modern") ? "selected" : ""}>Mode Moderne (TFT Infogare)</option>
-          <option value="mechanical" ${this._config.style === "mechanical" ? "selected" : ""}>Mode Mécanique (Palettes Solari)</option>
-        </select>
-      </div>
-    `;
-    const sel = this.querySelector("#styleSelect");
-    if (sel) {
-      sel.addEventListener("change", (e) => {
-        this._config = { ...this._config, style: e.target.value };
-        this.dispatchEvent(new CustomEvent("config-changed", {
-          detail: { config: this._config },
-          bubbles: true,
-          composed: true,
-        }));
-      });
-    }
-  }
-}
-if (!customElements.get("domolink-transport-card-editor")) {
-  customElements.define("domolink-transport-card-editor", DomolinkTransportCardEditor);
+if (!customElements.get("domolink_transport-panel")) {
+  customElements.define("domolink_transport-panel", class extends DomolinkTransportPanel {});
 }
 
 /**
@@ -1742,17 +1707,6 @@ class DomolinkTransportCard extends DomolinkTransportPanel {
     super.connectedCallback();
   }
 
-  static getStubConfig() {
-    return {
-      type: "custom:domolink-transport-card",
-      style: "modern",
-    };
-  }
-
-  static getConfigElement() {
-    return document.createElement("domolink-transport-card-editor");
-  }
-
   getCardSize() {
     return 6;
   }
@@ -1760,6 +1714,9 @@ class DomolinkTransportCard extends DomolinkTransportPanel {
 
 if (!customElements.get("domolink-transport-card")) {
   customElements.define("domolink-transport-card", DomolinkTransportCard);
+}
+if (!customElements.get("domolink_transport-card")) {
+  customElements.define("domolink_transport-card", class extends DomolinkTransportCard {});
 }
 window.customCards = window.customCards || [];
 if (!window.customCards.some((c) => c.type === "domolink-transport-card")) {
