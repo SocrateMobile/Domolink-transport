@@ -6,7 +6,7 @@
  * Repo: https://github.com/SocrateMobile/Domolink-transport
  */
 
-const VERSION = "1.0.26";
+const VERSION = "1.0.27";
 const GITHUB_REPO = "SocrateMobile/Domolink-transport";
 
 class DomolinkTransportPanel extends HTMLElement {
@@ -1667,8 +1667,8 @@ if (!customElements.get("domolink_transport-panel")) {
 class DomolinkTransportCard extends DomolinkTransportPanel {
   constructor() {
     super();
+    // Ne pas poser d'attribut ici : document.createElement() l'interdit dans un constructeur.
     this._isCard = true;
-    this.setAttribute("is-card", "true");
   }
 
   setConfig(config) {
