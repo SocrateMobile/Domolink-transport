@@ -1,0 +1,52 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure DomoLink-Transport",
+        "description": "Enter your SNCF API key and your usual train stations. You can also provide an optional PRIM (Île-de-France Mobilités) API key for real-time track info.",
+        "data": {
+          "api_key": "SNCF / Navitia API Key",
+          "prim_api_key": "PRIM IDFM API Key (Optional)",
+          "station_a": "Station A (Home, e.g. Enghien-les-Bains)",
+          "station_b": "Station B (Destination 1, e.g. Paris Nord)",
+          "station_c": "Station C (Destination 2, e.g. Ermont - Eaubonne)",
+          "scan_interval": "Update frequency (seconds)",
+          "create_legacy_entities": "Create backward-compatible sensors for openHASP",
+          "enable_panel": "Enable sidebar panel in left menu"
+        },
+        "data_description": {
+          "station_a": "Type the first letters to search for a station or select it from the list.",
+          "station_b": "Type the first letters to search for a station or select it from the list.",
+          "station_c": "Type the first letters to search for a station or select it from the list."
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid API key or access denied by SNCF server.",
+      "cannot_connect": "Failed to connect to the API."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "DomoLink-Transport Options",
+        "description": "Modify your API settings, train stations or display options.",
+        "data": {
+          "api_key": "SNCF / Navitia API Key",
+          "prim_api_key": "PRIM IDFM API Key (Optional)",
+          "station_a": "Station A (Home)",
+          "station_b": "Station B (Destination 1)",
+          "station_c": "Station C (Destination 2)",
+          "scan_interval": "Update frequency (seconds)",
+          "create_legacy_entities": "Create backward-compatible openHASP sensors",
+          "enable_panel": "Enable sidebar panel in left menu"
+        },
+        "data_description": {
+          "station_a": "Type the first letters to search for a station or select it from the list.",
+          "station_b": "Type the first letters to search for a station or select it from the list.",
+          "station_c": "Type the first letters to search for a station or select it from the list."
+        }
+      }
+    }
+  }
+}

@@ -2,49 +2,49 @@
   "config": {
     "step": {
       "user": {
-        "title": "Configuration de DomoLink-Transport",
-        "description": "Renseignez votre clé API SNCF et vos gares habituelles. Vous pourrez également renseigner une clé API PRIM (Île-de-France Mobilités) pour les voies temps réel.",
+        "title": "Configure DomoLink-Transport",
+        "description": "Enter your SNCF API key and your usual train stations. You can also provide an optional PRIM (Île-de-France Mobilités) API key for real-time track info.",
         "data": {
-          "api_key": "Clé API SNCF / Navitia",
-          "prim_api_key": "Clé API PRIM IDFM (Optionnelle)",
-          "station_a": "Gare A (Domicile, ex: Enghien-les-Bains)",
-          "station_b": "Gare B (Destination 1, ex: Paris Nord)",
-          "station_c": "Gare C (Destination 2, ex: Ermont - Eaubonne)",
-          "scan_interval": "Fréquence d'actualisation (secondes)",
-          "create_legacy_entities": "Créer les capteurs rétrocompatibles pour openHASP",
-          "enable_panel": "Activer le panneau dans la barre latérale gauche"
+          "api_key": "SNCF / Navitia API Key",
+          "prim_api_key": "PRIM IDFM API Key (Optional)",
+          "station_a": "Station A (Home, e.g. Enghien-les-Bains)",
+          "station_b": "Station B (Destination 1, e.g. Paris Nord)",
+          "station_c": "Station C (Destination 2, e.g. Ermont - Eaubonne)",
+          "scan_interval": "Update frequency (seconds)",
+          "create_legacy_entities": "Create backward-compatible sensors for openHASP",
+          "enable_panel": "Enable sidebar panel in left menu"
         },
         "data_description": {
-          "station_a": "Tapez les premières lettres pour rechercher une gare ou sélectionnez-la dans la liste.",
-          "station_b": "Tapez les premières lettres pour rechercher une gare ou sélectionnez-la dans la liste.",
-          "station_c": "Tapez les premières lettres pour rechercher une gare ou sélectionnez-la dans la liste."
+          "station_a": "Type the first letters to search for a station or select it from the list.",
+          "station_b": "Type the first letters to search for a station or select it from the list.",
+          "station_c": "Type the first letters to search for a station or select it from the list."
         }
       }
     },
     "error": {
-      "invalid_auth": "Clé API invalide ou accès refusé par le serveur SNCF.",
-      "cannot_connect": "Impossible de contacter l'API."
+      "invalid_auth": "Invalid API key or access denied by SNCF server.",
+      "cannot_connect": "Failed to connect to the API."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Options de DomoLink-Transport",
-        "description": "Modifiez vos paramètres d'API, vos gares ou vos options d'affichage.",
+        "title": "DomoLink-Transport Options",
+        "description": "Modify your API settings, train stations or display options.",
         "data": {
-          "api_key": "Clé API SNCF / Navitia",
-          "prim_api_key": "Clé API PRIM IDFM (Optionnelle)",
-          "station_a": "Gare A (Domicile)",
-          "station_b": "Gare B (Destination 1)",
-          "station_c": "Gare C (Destination 2)",
-          "scan_interval": "Fréquence d'actualisation (secondes)",
-          "create_legacy_entities": "Créer les capteurs rétrocompatibles openHASP",
-          "enable_panel": "Activer le panneau dans la barre latérale gauche"
+          "api_key": "SNCF / Navitia API Key",
+          "prim_api_key": "PRIM IDFM API Key (Optional)",
+          "station_a": "Station A (Home)",
+          "station_b": "Station B (Destination 1)",
+          "station_c": "Station C (Destination 2)",
+          "scan_interval": "Update frequency (seconds)",
+          "create_legacy_entities": "Create backward-compatible openHASP sensors",
+          "enable_panel": "Enable sidebar panel in left menu"
         },
         "data_description": {
-          "station_a": "Tapez les premières lettres pour rechercher une gare ou sélectionnez-la dans la liste.",
-          "station_b": "Tapez les premières lettres pour rechercher une gare ou sélectionnez-la dans la liste.",
-          "station_c": "Tapez les premières lettres pour rechercher une gare ou sélectionnez-la dans la liste."
+          "station_a": "Type the first letters to search for a station or select it from the list.",
+          "station_b": "Type the first letters to search for a station or select it from the list.",
+          "station_c": "Type the first letters to search for a station or select it from the list."
         }
       }
     }
