@@ -7,9 +7,9 @@ NAME = "DomoLink-Transport"
 _MANIFEST_PATH = os.path.join(os.path.dirname(__file__), "manifest.json")
 try:
     with open(_MANIFEST_PATH, "r", encoding="utf-8") as _f:
-        VERSION = json.load(_f).get("version", "1.0.23")
+        VERSION = json.load(_f).get("version", "1.0.29")
 except Exception:
-    VERSION = "1.0.27"
+    VERSION = "1.0.29"
 
 PLATFORMS = ["sensor", "binary_sensor", "switch", "button"]
 

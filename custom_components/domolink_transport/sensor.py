@@ -11,6 +11,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -67,28 +68,40 @@ async def async_setup_entry(
 
     # 4. Capteurs Rétrocompatibilité Totale pour openHASP (WT32-SC01 et Sunton 7")
     if coordinator.create_legacy_entities:
+        ent_reg = er.async_get(hass)
+
+        def _can_claim_legacy_id(target_entity_id: str) -> bool:
+            existing_entry = ent_reg.async_get(target_entity_id)
+            if existing_entry is not None and existing_entry.config_entry_id != entry.entry_id:
+                return False
+            if hass.states.get(target_entity_id) is not None and (
+                existing_entry is None or existing_entry.config_entry_id != entry.entry_id
+            ):
+                return False
+            return True
+
         # sensor.next_train_minutes_1 .. 4
         for idx in range(4):
-            entities.append(LegacyNextTrainMinutesSensor(coordinator, entry, idx))
+            entities.append(LegacyNextTrainMinutesSensor(coordinator, entry, idx, _can_claim_legacy_id))
 
         # sensor.next_trains_one et next_trains_two (synthèses)
-        entities.append(LegacyNextTrainsSummarySensor(coordinator, entry, 1))
-        entities.append(LegacyNextTrainsSummarySensor(coordinator, entry, 2))
+        entities.append(LegacyNextTrainsSummarySensor(coordinator, entry, 1, _can_claim_legacy_id))
+        entities.append(LegacyNextTrainsSummarySensor(coordinator, entry, 2, _can_claim_legacy_id))
 
         # sensor.train_traveler_eng_par_next_journey_1 .. 5
         for idx in range(5):
-            entities.append(LegacyJourneyMainSensor(coordinator, entry, idx))
-            entities.append(LegacyJourneyDepartureSensor(coordinator, entry, idx))
-            entities.append(LegacyJourneyArrivalSensor(coordinator, entry, idx))
-            entities.append(LegacyJourneyDurationSensor(coordinator, entry, idx))
-            entities.append(LegacyJourneyDelaySensor(coordinator, entry, idx))
+            entities.append(LegacyJourneyMainSensor(coordinator, entry, idx, _can_claim_legacy_id))
+            entities.append(LegacyJourneyDepartureSensor(coordinator, entry, idx, _can_claim_legacy_id))
+            entities.append(LegacyJourneyArrivalSensor(coordinator, entry, idx, _can_claim_legacy_id))
+            entities.append(LegacyJourneyDurationSensor(coordinator, entry, idx, _can_claim_legacy_id))
+            entities.append(LegacyJourneyDelaySensor(coordinator, entry, idx, _can_claim_legacy_id))
 
         # sensor.train_traveler_eng_par_last_journey_1
-        entities.append(LegacyLastJourneySensor(coordinator, entry))
+        entities.append(LegacyLastJourneySensor(coordinator, entry, _can_claim_legacy_id))
 
         # sensor.train_traveler_par_eng_next_journey_1 et duration_1 (retour Paris -> Enghien)
-        entities.append(LegacyReturnJourneySensor(coordinator, entry, 0))
-        entities.append(LegacyReturnJourneyDurationSensor(coordinator, entry, 0))
+        entities.append(LegacyReturnJourneySensor(coordinator, entry, 0, _can_claim_legacy_id))
+        entities.append(LegacyReturnJourneyDurationSensor(coordinator, entry, 0, _can_claim_legacy_id))
 
     async_add_entities(entities)
 
@@ -223,12 +236,20 @@ class DomolinkLastReturnSensor(DomolinkTransportBaseSensor):
 class LegacyNextTrainMinutesSensor(DomolinkTransportBaseSensor):
     """Drop-in replacement for sensor.next_train_minutes_X."""
 
-    def __init__(self, coordinator: DomolinkTransportCoordinator, entry: ConfigEntry, index: int) -> None:
+    def __init__(
+        self,
+        coordinator: DomolinkTransportCoordinator,
+        entry: ConfigEntry,
+        index: int,
+        can_claim: Any = None,
+    ) -> None:
         super().__init__(coordinator, entry)
         self._index = index
         self._attr_name = f"Minutes jusqu'au prochain train ({index + 1}{'er' if index == 0 else 'ème'})"
-        self._attr_unique_id = f"domolink_legacy_next_train_minutes_{index + 1}"
-        self.entity_id = f"sensor.next_train_minutes_{index + 1}"
+        self._attr_unique_id = f"{entry.entry_id}_domolink_legacy_next_train_minutes_{index + 1}"
+        target_id = f"sensor.next_train_minutes_{index + 1}"
+        if can_claim is None or can_claim(target_id):
+            self.entity_id = target_id
         self._attr_native_unit_of_measurement = "min"
 
     @property
@@ -243,17 +264,25 @@ class LegacyNextTrainMinutesSensor(DomolinkTransportBaseSensor):
 class LegacyNextTrainsSummarySensor(DomolinkTransportBaseSensor):
     """Drop-in replacement for sensor.next_trains_one and sensor.next_trains_two."""
 
-    def __init__(self, coordinator: DomolinkTransportCoordinator, entry: ConfigEntry, mode: int) -> None:
+    def __init__(
+        self,
+        coordinator: DomolinkTransportCoordinator,
+        entry: ConfigEntry,
+        mode: int,
+        can_claim: Any = None,
+    ) -> None:
         super().__init__(coordinator, entry)
         self._mode = mode
         if mode == 1:
             self._attr_name = "Le Prochain train"
-            self._attr_unique_id = "domolink_legacy_next_trains_one"
-            self.entity_id = "sensor.next_trains_one"
+            self._attr_unique_id = f"{entry.entry_id}_domolink_legacy_next_trains_one"
+            target_id = "sensor.next_trains_one"
         else:
             self._attr_name = "2 Prochains trains"
-            self._attr_unique_id = "domolink_legacy_next_trains_two"
-            self.entity_id = "sensor.next_trains_two"
+            self._attr_unique_id = f"{entry.entry_id}_domolink_legacy_next_trains_two"
+            target_id = "sensor.next_trains_two"
+        if can_claim is None or can_claim(target_id):
+            self.entity_id = target_id
 
     @property
     def native_value(self) -> str:
@@ -280,12 +309,20 @@ class LegacyNextTrainsSummarySensor(DomolinkTransportBaseSensor):
 class LegacyJourneyMainSensor(DomolinkTransportBaseSensor):
     """Drop-in replacement for sensor.train_traveler_eng_par_next_journey_X."""
 
-    def __init__(self, coordinator: DomolinkTransportCoordinator, entry: ConfigEntry, index: int) -> None:
+    def __init__(
+        self,
+        coordinator: DomolinkTransportCoordinator,
+        entry: ConfigEntry,
+        index: int,
+        can_claim: Any = None,
+    ) -> None:
         super().__init__(coordinator, entry)
         self._index = index
         self._attr_name = f"{coordinator.station_a_name} - {coordinator.station_b_name} Journey {index + 1}"
-        self._attr_unique_id = f"domolink_legacy_train_traveler_eng_par_next_journey_{index + 1}"
-        self.entity_id = f"sensor.train_traveler_eng_par_next_journey_{index + 1}"
+        self._attr_unique_id = f"{entry.entry_id}_domolink_legacy_train_traveler_eng_par_next_journey_{index + 1}"
+        target_id = f"sensor.train_traveler_eng_par_next_journey_{index + 1}"
+        if can_claim is None or can_claim(target_id):
+            self.entity_id = target_id
 
     @property
     def native_value(self) -> str | None:
@@ -319,12 +356,20 @@ class LegacyJourneyMainSensor(DomolinkTransportBaseSensor):
 class LegacyJourneyDepartureSensor(DomolinkTransportBaseSensor):
     """Drop-in replacement for sensor.train_traveler_eng_par_next_journey_departure_X."""
 
-    def __init__(self, coordinator: DomolinkTransportCoordinator, entry: ConfigEntry, index: int) -> None:
+    def __init__(
+        self,
+        coordinator: DomolinkTransportCoordinator,
+        entry: ConfigEntry,
+        index: int,
+        can_claim: Any = None,
+    ) -> None:
         super().__init__(coordinator, entry)
         self._index = index
         self._attr_name = f"{coordinator.station_a_name} - {coordinator.station_b_name} Departure {index + 1}"
-        self._attr_unique_id = f"domolink_legacy_train_traveler_eng_par_next_journey_departure_{index + 1}"
-        self.entity_id = f"sensor.train_traveler_eng_par_next_journey_departure_{index + 1}"
+        self._attr_unique_id = f"{entry.entry_id}_domolink_legacy_train_traveler_eng_par_next_journey_departure_{index + 1}"
+        target_id = f"sensor.train_traveler_eng_par_next_journey_departure_{index + 1}"
+        if can_claim is None or can_claim(target_id):
+            self.entity_id = target_id
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
 
     @property
@@ -339,12 +384,20 @@ class LegacyJourneyDepartureSensor(DomolinkTransportBaseSensor):
 class LegacyJourneyArrivalSensor(DomolinkTransportBaseSensor):
     """Drop-in replacement for sensor.train_traveler_eng_par_next_journey_arrival_X."""
 
-    def __init__(self, coordinator: DomolinkTransportCoordinator, entry: ConfigEntry, index: int) -> None:
+    def __init__(
+        self,
+        coordinator: DomolinkTransportCoordinator,
+        entry: ConfigEntry,
+        index: int,
+        can_claim: Any = None,
+    ) -> None:
         super().__init__(coordinator, entry)
         self._index = index
         self._attr_name = f"{coordinator.station_a_name} - {coordinator.station_b_name} Arrival {index + 1}"
-        self._attr_unique_id = f"domolink_legacy_train_traveler_eng_par_next_journey_arrival_{index + 1}"
-        self.entity_id = f"sensor.train_traveler_eng_par_next_journey_arrival_{index + 1}"
+        self._attr_unique_id = f"{entry.entry_id}_domolink_legacy_train_traveler_eng_par_next_journey_arrival_{index + 1}"
+        target_id = f"sensor.train_traveler_eng_par_next_journey_arrival_{index + 1}"
+        if can_claim is None or can_claim(target_id):
+            self.entity_id = target_id
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
 
     @property
@@ -359,12 +412,20 @@ class LegacyJourneyArrivalSensor(DomolinkTransportBaseSensor):
 class LegacyJourneyDurationSensor(DomolinkTransportBaseSensor):
     """Drop-in replacement for sensor.train_traveler_eng_par_next_journey_duration_X."""
 
-    def __init__(self, coordinator: DomolinkTransportCoordinator, entry: ConfigEntry, index: int) -> None:
+    def __init__(
+        self,
+        coordinator: DomolinkTransportCoordinator,
+        entry: ConfigEntry,
+        index: int,
+        can_claim: Any = None,
+    ) -> None:
         super().__init__(coordinator, entry)
         self._index = index
         self._attr_name = f"{coordinator.station_a_name} - {coordinator.station_b_name} Duration {index + 1}"
-        self._attr_unique_id = f"domolink_legacy_train_traveler_eng_par_next_journey_duration_{index + 1}"
-        self.entity_id = f"sensor.train_traveler_eng_par_next_journey_duration_{index + 1}"
+        self._attr_unique_id = f"{entry.entry_id}_domolink_legacy_train_traveler_eng_par_next_journey_duration_{index + 1}"
+        target_id = f"sensor.train_traveler_eng_par_next_journey_duration_{index + 1}"
+        if can_claim is None or can_claim(target_id):
+            self.entity_id = target_id
         self._attr_device_class = SensorDeviceClass.DURATION
         self._attr_native_unit_of_measurement = "s"
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -380,12 +441,20 @@ class LegacyJourneyDurationSensor(DomolinkTransportBaseSensor):
 class LegacyJourneyDelaySensor(DomolinkTransportBaseSensor):
     """Drop-in replacement for sensor.train_traveler_eng_par_next_journey_disruption_delay_X."""
 
-    def __init__(self, coordinator: DomolinkTransportCoordinator, entry: ConfigEntry, index: int) -> None:
+    def __init__(
+        self,
+        coordinator: DomolinkTransportCoordinator,
+        entry: ConfigEntry,
+        index: int,
+        can_claim: Any = None,
+    ) -> None:
         super().__init__(coordinator, entry)
         self._index = index
         self._attr_name = f"{coordinator.station_a_name} - {coordinator.station_b_name} Delay {index + 1}"
-        self._attr_unique_id = f"domolink_legacy_train_traveler_eng_par_next_journey_disruption_delay_{index + 1}"
-        self.entity_id = f"sensor.train_traveler_eng_par_next_journey_disruption_delay_{index + 1}"
+        self._attr_unique_id = f"{entry.entry_id}_domolink_legacy_train_traveler_eng_par_next_journey_disruption_delay_{index + 1}"
+        target_id = f"sensor.train_traveler_eng_par_next_journey_disruption_delay_{index + 1}"
+        if can_claim is None or can_claim(target_id):
+            self.entity_id = target_id
         self._attr_native_unit_of_measurement = "min"
 
     @property
@@ -399,11 +468,18 @@ class LegacyJourneyDelaySensor(DomolinkTransportBaseSensor):
 class LegacyLastJourneySensor(DomolinkTransportBaseSensor):
     """Drop-in replacement for sensor.train_traveler_eng_par_last_journey_1."""
 
-    def __init__(self, coordinator: DomolinkTransportCoordinator, entry: ConfigEntry) -> None:
+    def __init__(
+        self,
+        coordinator: DomolinkTransportCoordinator,
+        entry: ConfigEntry,
+        can_claim: Any = None,
+    ) -> None:
         super().__init__(coordinator, entry)
         self._attr_name = "Dernier Train Retour Enghien"
-        self._attr_unique_id = "domolink_legacy_train_traveler_eng_par_last_journey_1"
-        self.entity_id = "sensor.train_traveler_eng_par_last_journey_1"
+        self._attr_unique_id = f"{entry.entry_id}_domolink_legacy_train_traveler_eng_par_last_journey_1"
+        target_id = "sensor.train_traveler_eng_par_last_journey_1"
+        if can_claim is None or can_claim(target_id):
+            self.entity_id = target_id
 
     @property
     def native_value(self) -> str | None:
@@ -431,12 +507,20 @@ class LegacyLastJourneySensor(DomolinkTransportBaseSensor):
 class LegacyReturnJourneySensor(DomolinkTransportBaseSensor):
     """Drop-in replacement for sensor.train_traveler_par_eng_next_journey_1."""
 
-    def __init__(self, coordinator: DomolinkTransportCoordinator, entry: ConfigEntry, index: int) -> None:
+    def __init__(
+        self,
+        coordinator: DomolinkTransportCoordinator,
+        entry: ConfigEntry,
+        index: int,
+        can_claim: Any = None,
+    ) -> None:
         super().__init__(coordinator, entry)
         self._index = index
         self._attr_name = "Train Retour Paris Nord vers Enghien"
-        self._attr_unique_id = "domolink_legacy_train_traveler_par_eng_next_journey_1"
-        self.entity_id = "sensor.train_traveler_par_eng_next_journey_1"
+        self._attr_unique_id = f"{entry.entry_id}_domolink_legacy_train_traveler_par_eng_next_journey_1"
+        target_id = "sensor.train_traveler_par_eng_next_journey_1"
+        if can_claim is None or can_claim(target_id):
+            self.entity_id = target_id
 
     @property
     def native_value(self) -> str | None:
@@ -467,12 +551,20 @@ class LegacyReturnJourneySensor(DomolinkTransportBaseSensor):
 class LegacyReturnJourneyDurationSensor(DomolinkTransportBaseSensor):
     """Drop-in replacement for sensor.train_traveler_par_eng_next_journey_duration_1."""
 
-    def __init__(self, coordinator: DomolinkTransportCoordinator, entry: ConfigEntry, index: int) -> None:
+    def __init__(
+        self,
+        coordinator: DomolinkTransportCoordinator,
+        entry: ConfigEntry,
+        index: int,
+        can_claim: Any = None,
+    ) -> None:
         super().__init__(coordinator, entry)
         self._index = index
         self._attr_name = "Durée Retour Paris Nord vers Enghien"
-        self._attr_unique_id = "domolink_legacy_train_traveler_par_eng_next_journey_duration_1"
-        self.entity_id = "sensor.train_traveler_par_eng_next_journey_duration_1"
+        self._attr_unique_id = f"{entry.entry_id}_domolink_legacy_train_traveler_par_eng_next_journey_duration_1"
+        target_id = "sensor.train_traveler_par_eng_next_journey_duration_1"
+        if can_claim is None or can_claim(target_id):
+            self.entity_id = target_id
         self._attr_device_class = SensorDeviceClass.DURATION
         self._attr_native_unit_of_measurement = "s"
 

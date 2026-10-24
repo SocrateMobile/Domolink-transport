@@ -6,14 +6,27 @@
  * Repo: https://github.com/SocrateMobile/Domolink-transport
  */
 
-const VERSION = "1.0.27";
+const VERSION = "1.0.29";
 const GITHUB_REPO = "SocrateMobile/Domolink-transport";
+
+function escapeHtml(val) {
+  return String(val ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function normalizeStyle(style) {
+  return style === "modern" || style === "mechanical" ? style : "modern";
+}
 
 class DomolinkTransportPanel extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._styleMode = localStorage.getItem("domolink_transport_style") || "modern"; // "modern" ou "mechanical"
+    this._styleMode = normalizeStyle(localStorage.getItem("domolink_transport_style")); // "modern" ou "mechanical"
     this._initialized = false;
     this._data = null;
     this._logoClickCount = 0;
@@ -31,7 +44,7 @@ class DomolinkTransportPanel extends HTMLElement {
     this._isCard = true;
     this.setAttribute("is-card", "true");
     if (this._config.style) {
-      this._styleMode = this._config.style;
+      this._styleMode = normalizeStyle(this._config.style);
     }
   }
 
@@ -67,7 +80,15 @@ class DomolinkTransportPanel extends HTMLElement {
   async _fetchData() {
     if (!this._hass) return;
     try {
-      const resp = await this._hass.callApi("GET", "domolink_transport/data");
+      const params = new URLSearchParams();
+      if (this._config && this._config.entry_id) {
+        params.set("entry_id", this._config.entry_id);
+      } else if (this._config && this._config.station_a) {
+        params.set("station_a", this._config.station_a);
+      }
+      const query = params.toString();
+      const url = query ? `domolink_transport/data?${query}` : "domolink_transport/data";
+      const resp = await this._hass.callApi("GET", url);
       if (resp) {
         if (resp.version) {
           this._installedVersion = resp.version;
@@ -251,6 +272,8 @@ class DomolinkTransportPanel extends HTMLElement {
     if (this._isCard) {
       this.setAttribute("is-card", "true");
     }
+    const safeStyle = normalizeStyle(this._styleMode);
+    this._styleMode = safeStyle;
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -1073,7 +1096,7 @@ class DomolinkTransportPanel extends HTMLElement {
         }
       </style>
 
-      <div class="${this._styleMode}-theme" id="themeWrapper">
+      <div class="${safeStyle}-theme" id="themeWrapper">
         <!-- TOP NAVBAR -->
         <div class="navbar">
           <div class="brand" id="brandLogo">
@@ -1081,16 +1104,16 @@ class DomolinkTransportPanel extends HTMLElement {
             <div>
               <div class="brand-title">DomoLink-Transport</div>
             </div>
-            <div class="brand-badge" id="versionBadge">v${VERSION}</div>
+            <div class="brand-badge" id="versionBadge">v${escapeHtml(VERSION)}</div>
           </div>
 
           <div class="actions">
             <!-- STYLE SWITCH -->
             <div class="style-switch">
-              <button class="style-btn ${this._styleMode === 'modern' ? 'active' : ''}" id="btnStyleModern">
+              <button class="style-btn ${safeStyle === 'modern' ? 'active' : ''}" id="btnStyleModern">
                 🚆 Moderne
               </button>
-              <button class="style-btn ${this._styleMode === 'mechanical' ? 'active' : ''}" id="btnStyleMech">
+              <button class="style-btn ${safeStyle === 'mechanical' ? 'active' : ''}" id="btnStyleMech">
                 📟 Mécanique
               </button>
             </div>
@@ -1290,7 +1313,7 @@ class DomolinkTransportPanel extends HTMLElement {
               Vous pouvez ajouter ce panneau directement dans n'importe quel tableau de bord Home Assistant Lovelace avec le code suivant :
             </p>
             <div class="code-box" id="cardYamlCode">type: custom:domolink-transport-card
-style: ${this._styleMode}
+style: ${safeStyle}
 station_a: Enghien-les-Bains
 station_b: Paris Nord
 station_c: Ermont - Eaubonne</div>
@@ -1412,12 +1435,19 @@ station_c: Ermont - Eaubonne</div>
   }
 
   _setStyle(mode) {
-    this._styleMode = mode;
-    localStorage.setItem("domolink_transport_style", mode);
+    const safeMode = normalizeStyle(mode);
+    this._styleMode = safeMode;
+    localStorage.setItem("domolink_transport_style", safeMode);
     const wrapper = this.shadowRoot.getElementById("themeWrapper");
-    wrapper.className = `${mode}-theme`;
-    this.shadowRoot.getElementById("btnStyleModern").classList.toggle("active", mode === "modern");
-    this.shadowRoot.getElementById("btnStyleMech").classList.toggle("active", mode === "mechanical");
+    if (wrapper) wrapper.className = `${safeMode}-theme`;
+    const btnMod = this.shadowRoot.getElementById("btnStyleModern");
+    if (btnMod) btnMod.classList.toggle("active", safeMode === "modern");
+    const btnMech = this.shadowRoot.getElementById("btnStyleMech");
+    if (btnMech) btnMech.classList.toggle("active", safeMode === "mechanical");
+    const yamlBox = this.shadowRoot.getElementById("cardYamlCode");
+    if (yamlBox) {
+      yamlBox.textContent = `type: custom:domolink-transport-card\nstyle: ${safeMode}\nstation_a: Enghien-les-Bains\nstation_b: Paris Nord\nstation_c: Ermont - Eaubonne`;
+    }
     this._updateDisplay();
   }
 
@@ -1576,21 +1606,29 @@ station_c: Ermont - Eaubonne</div>
   }
 
   _renderTableRows(tbody, journeys, destinationDefault) {
+    if (!tbody) return;
+    tbody.replaceChildren();
+
     if (!journeys || journeys.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 24px; color: #8899a6;">Aucun train annoncé prochainement.</td></tr>`;
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 4;
+      td.style.cssText = "text-align: center; padding: 24px; color: #8899a6;";
+      td.textContent = "Aucun train annoncé prochainement.";
+      tr.appendChild(td);
+      tbody.appendChild(tr);
       return;
     }
 
-    const isMech = this._styleMode === "mechanical";
-    let html = "";
+    const isMech = normalizeStyle(this._styleMode) === "mechanical";
 
     journeys.slice(0, 3).forEach((j) => {
-      const time = j.departure_time_str || "--:--";
-      const platform = j.platform || "-";
-      const mission = j.headsign || "TRAIN";
-      const dest = j.direction || destinationDefault;
-      const mins = j.minutes_remaining;
-      const delay = j.delay_minutes || 0;
+      const time = String(j.departure_time_str || "--:--");
+      const platform = String(j.platform || "-");
+      const mission = String(j.headsign || "TRAIN");
+      const dest = String(j.direction || destinationDefault || "");
+      const mins = j.minutes_remaining !== undefined ? Number(j.minutes_remaining) : undefined;
+      const delay = Number(j.delay_minutes) || 0;
 
       let statusClass = "status-ontime";
       let statusText = "À l'heure";
@@ -1598,58 +1636,109 @@ station_c: Ermont - Eaubonne</div>
       if (delay > 0) {
         statusClass = "status-delayed";
         statusText = `Retard +${delay} min`;
-      } else if (mins <= 2) {
+      } else if (mins !== undefined && !Number.isNaN(mins) && mins <= 2) {
         statusClass = "status-approaching";
         statusText = "À quai";
       }
 
-      const countdownText = mins !== undefined ? (mins > 0 ? `dans ${mins} min` : "départ") : "";
+      const countdownText = mins !== undefined && !Number.isNaN(mins) ? (mins > 0 ? `dans ${mins} min` : "départ") : "";
 
-      const platformRangeClass = (platform && platform.length > 2) ? "platform-range" : "";
+      const platformRangeClass = platform.length > 2 ? "platform-range" : "";
       const platformTitle = platform === "30-36" ? "Surface (Voies 30 à 36)" : (platform === "3-4" ? "Voies 3 ou 4" : `Voie ${platform}`);
 
-      if (isMech) {
-        html += `
-          <tr class="train-row">
-            <td class="train-time" style="padding: 8px 10px;">
-              <div><span class="flap-box">${time}</span></div>
-              <div style="font-family: monospace; font-size: 0.75rem; color: #a0aec0; margin-top: 3px;">(${countdownText})</div>
-            </td>
-            <td class="train-platform" style="padding: 8px 8px;">
-              <span class="flap-box ${platformRangeClass}" title="${platformTitle}">${platform}</span>
-            </td>
-            <td style="padding: 8px 10px;">
-              <span class="flap-box" style="color: #38b6ff; margin-right: 6px; font-size: 0.82rem; padding: 3px 6px;">${mission}</span>
-              <span class="train-dest">${dest}</span>
-            </td>
-            <td style="padding: 8px 10px; text-align: right;">
-              <span class="flap-box ${statusClass}" style="font-size: 0.8rem; padding: 4px 8px;">${statusText.toUpperCase()}</span>
-            </td>
-          </tr>
-        `;
-      } else {
-        html += `
-          <tr class="train-row">
-            <td class="train-time">
-              <div class="train-time-main">${time}</div>
-              <div class="train-countdown">(${countdownText})</div>
-            </td>
-            <td>
-              <span class="train-platform ${platformRangeClass}" title="${platformTitle}">${platform}</span>
-            </td>
-            <td class="train-dest">
-              <span class="train-mission">${mission}</span>
-              <span style="margin-left: 6px;">${dest}</span>
-            </td>
-            <td class="train-status ${statusClass}">
-              ${statusText}
-            </td>
-          </tr>
-        `;
-      }
-    });
+      const tr = document.createElement("tr");
+      tr.className = "train-row";
 
-    tbody.innerHTML = html;
+      if (isMech) {
+        const tdTime = document.createElement("td");
+        tdTime.className = "train-time";
+        tdTime.style.padding = "8px 10px";
+        const divFlap = document.createElement("div");
+        const spanTime = document.createElement("span");
+        spanTime.className = "flap-box";
+        spanTime.textContent = time;
+        divFlap.appendChild(spanTime);
+        const divCount = document.createElement("div");
+        divCount.style.cssText = "font-family: monospace; font-size: 0.75rem; color: #a0aec0; margin-top: 3px;";
+        divCount.textContent = `(${countdownText})`;
+        tdTime.appendChild(divFlap);
+        tdTime.appendChild(divCount);
+
+        const tdPlat = document.createElement("td");
+        tdPlat.className = "train-platform";
+        tdPlat.style.padding = "8px 8px";
+        const spanPlat = document.createElement("span");
+        spanPlat.className = platformRangeClass ? `flap-box ${platformRangeClass}` : "flap-box";
+        spanPlat.setAttribute("title", platformTitle);
+        spanPlat.textContent = platform;
+        tdPlat.appendChild(spanPlat);
+
+        const tdDest = document.createElement("td");
+        tdDest.style.padding = "8px 10px";
+        const spanMission = document.createElement("span");
+        spanMission.className = "flap-box";
+        spanMission.style.cssText = "color: #38b6ff; margin-right: 6px; font-size: 0.82rem; padding: 3px 6px;";
+        spanMission.textContent = mission;
+        const spanDest = document.createElement("span");
+        spanDest.className = "train-dest";
+        spanDest.textContent = dest;
+        tdDest.appendChild(spanMission);
+        tdDest.appendChild(spanDest);
+
+        const tdStatus = document.createElement("td");
+        tdStatus.style.cssText = "padding: 8px 10px; text-align: right;";
+        const spanStatus = document.createElement("span");
+        spanStatus.className = `flap-box ${statusClass}`;
+        spanStatus.style.cssText = "font-size: 0.8rem; padding: 4px 8px;";
+        spanStatus.textContent = statusText.toUpperCase();
+        tdStatus.appendChild(spanStatus);
+
+        tr.appendChild(tdTime);
+        tr.appendChild(tdPlat);
+        tr.appendChild(tdDest);
+        tr.appendChild(tdStatus);
+      } else {
+        const tdTime = document.createElement("td");
+        tdTime.className = "train-time";
+        const divTimeMain = document.createElement("div");
+        divTimeMain.className = "train-time-main";
+        divTimeMain.textContent = time;
+        const divCount = document.createElement("div");
+        divCount.className = "train-countdown";
+        divCount.textContent = `(${countdownText})`;
+        tdTime.appendChild(divTimeMain);
+        tdTime.appendChild(divCount);
+
+        const tdPlat = document.createElement("td");
+        const spanPlat = document.createElement("span");
+        spanPlat.className = platformRangeClass ? `train-platform ${platformRangeClass}` : "train-platform";
+        spanPlat.setAttribute("title", platformTitle);
+        spanPlat.textContent = platform;
+        tdPlat.appendChild(spanPlat);
+
+        const tdDest = document.createElement("td");
+        tdDest.className = "train-dest";
+        const spanMission = document.createElement("span");
+        spanMission.className = "train-mission";
+        spanMission.textContent = mission;
+        const spanDest = document.createElement("span");
+        spanDest.style.marginLeft = "6px";
+        spanDest.textContent = dest;
+        tdDest.appendChild(spanMission);
+        tdDest.appendChild(spanDest);
+
+        const tdStatus = document.createElement("td");
+        tdStatus.className = `train-status ${statusClass}`;
+        tdStatus.textContent = statusText;
+
+        tr.appendChild(tdTime);
+        tr.appendChild(tdPlat);
+        tr.appendChild(tdDest);
+        tr.appendChild(tdStatus);
+      }
+
+      tbody.appendChild(tr);
+    });
   }
 }
 
@@ -1676,7 +1765,10 @@ class DomolinkTransportCard extends DomolinkTransportPanel {
     this._isCard = true;
     this.setAttribute("is-card", "true");
     if (this._config.style) {
-      this._styleMode = this._config.style;
+      this._styleMode = normalizeStyle(this._config.style);
+      if (this._initialized && this.shadowRoot) {
+        this._setStyle(this._styleMode);
+      }
     }
     if (this._initialized && this._data) {
       this._updateDisplay();
