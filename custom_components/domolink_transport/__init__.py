@@ -70,20 +70,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await _async_register_lovelace_resource(hass)
 
-    # 3. Register HTTP API View for Panel
-    hass.http.register_view(DomolinkTransportDataApiView(coordinator))
-    hass.http.register_view(DomolinkTransportRefreshApiView(coordinator))
-    hass.http.register_view(DomolinkTransportStationSearchApiView(coordinator))
+    # 3. Register HTTP API View for Panel (once per Home Assistant instance)
+    if not hass.data[DOMAIN].get("views_registered"):
+        hass.http.register_view(DomolinkTransportDataApiView(hass))
+        hass.http.register_view(DomolinkTransportRefreshApiView(hass))
+        hass.http.register_view(DomolinkTransportStationSearchApiView(hass))
+        hass.data[DOMAIN]["views_registered"] = True
 
     # 4. Forward platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # 5. Register HA Services
-    async def handle_refresh(call: ServiceCall) -> None:
-        """Service to force refresh transport data."""
-        await coordinator.async_request_refresh()
+    # 5. Register HA Services (once)
+    if not hass.services.has_service(DOMAIN, "refresh"):
+        async def handle_refresh(call: ServiceCall) -> None:
+            """Service to force refresh transport data across all active entries."""
+            for item in list(hass.data.get(DOMAIN, {}).values()):
+                if isinstance(item, dict) and "coordinator" in item:
+                    await item["coordinator"].async_request_refresh()
 
-    hass.services.async_register(DOMAIN, "refresh", handle_refresh)
+        hass.services.async_register(DOMAIN, "refresh", handle_refresh)
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     _LOGGER.info("DomoLink-Transport v%s initialisé avec succès.", VERSION)
@@ -202,6 +207,32 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 # API VIEWS POUR LE PANNEAU FRONTEND
 # =========================================================================
 
+def _get_coordinator(
+    hass: HomeAssistant,
+    entry_id: str | None = None,
+    station_a: str | None = None,
+) -> DomolinkTransportCoordinator | None:
+    """Resolve the active DomolinkTransportCoordinator from hass.data."""
+    domain_data = hass.data.get(DOMAIN, {})
+    if entry_id and isinstance(domain_data.get(entry_id), dict):
+        coord = domain_data[entry_id].get("coordinator")
+        if coord is not None:
+            return coord
+
+    coordinators: list[DomolinkTransportCoordinator] = [
+        v["coordinator"]
+        for v in domain_data.values()
+        if isinstance(v, dict) and "coordinator" in v
+    ]
+    if station_a:
+        target = station_a.strip().lower()
+        for coord in coordinators:
+            if (coord.station_a_name or "").strip().lower() == target or (coord.station_a_id or "").strip().lower() == target:
+                return coord
+
+    return coordinators[-1] if coordinators else None
+
+
 class DomolinkTransportDataApiView(HomeAssistantView):
     """View to get current transport data."""
 
@@ -209,13 +240,18 @@ class DomolinkTransportDataApiView(HomeAssistantView):
     name = "api:domolink_transport:data"
     requires_auth = True
 
-    def __init__(self, coordinator: DomolinkTransportCoordinator) -> None:
-        self.coordinator = coordinator
+    def __init__(self, hass: HomeAssistant) -> None:
+        self.hass = hass
 
     async def get(self, request: web.Request) -> web.Response:
+        hass = request.app.get("hass", self.hass)
+        entry_id = request.query.get("entry_id")
+        station_a = request.query.get("station_a")
+        coordinator = _get_coordinator(hass, entry_id=entry_id, station_a=station_a)
         return self.json({
             "version": VERSION,
-            "data": self.coordinator.data,
+            "entry_id": coordinator.entry.entry_id if coordinator else None,
+            "data": coordinator.data if coordinator else None,
         })
 
 
@@ -226,11 +262,22 @@ class DomolinkTransportRefreshApiView(HomeAssistantView):
     name = "api:domolink_transport:refresh"
     requires_auth = True
 
-    def __init__(self, coordinator: DomolinkTransportCoordinator) -> None:
-        self.coordinator = coordinator
+    def __init__(self, hass: HomeAssistant) -> None:
+        self.hass = hass
 
     async def post(self, request: web.Request) -> web.Response:
-        await self.coordinator.async_request_refresh()
+        hass = request.app.get("hass", self.hass)
+        entry_id = request.query.get("entry_id")
+        if not entry_id:
+            try:
+                body = await request.json()
+                if isinstance(body, dict):
+                    entry_id = body.get("entry_id")
+            except Exception:
+                pass
+        coordinator = _get_coordinator(hass, entry_id=entry_id)
+        if coordinator is not None:
+            await coordinator.async_request_refresh()
         return self.json({"status": "ok", "message": "Actualisation en cours..."})
 
 
@@ -241,10 +288,15 @@ class DomolinkTransportStationSearchApiView(HomeAssistantView):
     name = "api:domolink_transport:search_station"
     requires_auth = True
 
-    def __init__(self, coordinator: DomolinkTransportCoordinator) -> None:
-        self.coordinator = coordinator
+    def __init__(self, hass: HomeAssistant) -> None:
+        self.hass = hass
 
     async def get(self, request: web.Request) -> web.Response:
+        hass = request.app.get("hass", self.hass)
         q = request.query.get("q", "").strip()
-        results = await self.coordinator.api.async_search_station(q)
+        entry_id = request.query.get("entry_id")
+        coordinator = _get_coordinator(hass, entry_id=entry_id)
+        if coordinator is None:
+            return self.json({"results": []})
+        results = await coordinator.api.async_search_station(q)
         return self.json({"results": results})
