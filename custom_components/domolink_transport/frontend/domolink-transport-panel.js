@@ -6,7 +6,7 @@
  * Repo: https://github.com/SocrateMobile/Domolink-transport
  */
 
-const VERSION = "1.0.29";
+const VERSION = "3.0.0";
 const GITHUB_REPO = "SocrateMobile/Domolink-transport";
 
 function escapeHtml(val) {
