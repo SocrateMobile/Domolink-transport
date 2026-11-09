@@ -1,5 +1,10 @@
 # DomoLink-Transport 🚆
 
+[![Documentation Officielle](https://img.shields.io/badge/Documentation-socratemobile.fr-06b6d4.svg?logo=googlechrome&logoColor=white)](https://socratemobile.fr/integration.html?id=domolink-transport)
+
+> 🌐 **Site officiel & Documentation complète** : Retrouvez le guide d'installation pas à pas, les entités supportées et les exemples d'automatisations sur [socratemobile.fr](https://socratemobile.fr/integration.html?id=domolink-transport).
+
+
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/v/release/SocrateMobile/Domolink-transport?color=brightgreen)](https://github.com/SocrateMobile/Domolink-transport/releases)
 [![Maintainer](https://img.shields.io/badge/maintainer-SocrateMobile-blue.svg)](https://github.com/SocrateMobile)
