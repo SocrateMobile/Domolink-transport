@@ -153,7 +153,7 @@ class DomolinkTransportApiClient:
             # Récupérer les quais temps réel PRIM en parallèle si disponible
             prim_platforms = await self.async_get_prim_platforms(from_id)
 
-            async with self._session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+            async with self._session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
                 if resp.status == 429:
                     self.quota_reached = True
                     _LOGGER.warning("DomoLink-Transport : Quota quotidien API SNCF (5000/j) atteint.")
@@ -168,8 +168,11 @@ class DomolinkTransportApiClient:
                 # Filter out past journeys if diff < 0
                 valid = [p for p in parsed if p is not None]
                 return valid[:count]
+        except (TimeoutError, aiohttp.ClientError) as err:
+            _LOGGER.warning("Timeout/réseau API SNCF journeys (%s -> %s): %s", from_id, to_id, err or type(err).__name__)
+            return []
         except Exception as err:
-            _LOGGER.error("Exception API SNCF journeys (%s -> %s): %s", from_id, to_id, err)
+            _LOGGER.error("Exception API SNCF journeys (%s -> %s): %s", from_id, to_id, err or repr(err))
             return []
 
     async def async_get_last_night_journey(
@@ -202,7 +205,7 @@ class DomolinkTransportApiClient:
         try:
             prim_platforms = await self.async_get_prim_platforms(from_id)
 
-            async with self._session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+            async with self._session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
                 if resp.status == 429:
                     self.quota_reached = True
                     return None
@@ -259,8 +262,11 @@ class DomolinkTransportApiClient:
                 if last_raw:
                     return self._parse_journey(last_raw, from_id, to_id, prim_platforms)
                 return None
+        except (TimeoutError, aiohttp.ClientError) as err:
+            _LOGGER.warning("Timeout/réseau API dernier train (%s -> %s): %s", from_id, to_id, err or type(err).__name__)
+            return None
         except Exception as err:
-            _LOGGER.error("Exception API dernier train (%s -> %s): %s", from_id, to_id, err)
+            _LOGGER.error("Exception API dernier train (%s -> %s): %s", from_id, to_id, err or repr(err))
             return None
 
     async def async_get_line_disruptions(
