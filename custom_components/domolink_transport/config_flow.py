@@ -56,14 +56,13 @@ async def _resolve_station(api: DomolinkTransportApiClient, name_or_id: str, def
     if clean.startswith("stop_area:"):
         return clean, clean
 
-    # Fast lookup from pre-mapped stations
-    if clean in KNOWN_STATION_IDS:
-        return clean, KNOWN_STATION_IDS[clean]
-
-    # Search via API
+    # Search via API first so live stop_area IDs are always preferred over static fallbacks
     results = await api.async_search_station(clean)
     if results:
         return results[0]["name"], results[0]["id"]
+
+    if clean in KNOWN_STATION_IDS:
+        return clean, KNOWN_STATION_IDS[clean]
 
     return clean, default_id
 

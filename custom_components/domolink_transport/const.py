@@ -37,13 +37,20 @@ CONF_CREATE_LEGACY_ENTITIES = "create_legacy_entities"
 # Defaults
 DEFAULT_SCAN_INTERVAL = 180  # seconds (3 min pour préserver le quota 5000/j)
 DEFAULT_STATION_A_NAME = "Enghien-les-Bains"
-DEFAULT_STATION_A_ID = "stop_area:SNCF:87276022"
+DEFAULT_STATION_A_ID = "stop_area:IDFM:65485"
 
 DEFAULT_STATION_B_NAME = "Paris Nord"
-DEFAULT_STATION_B_ID = "stop_area:SNCF:87271007"
+DEFAULT_STATION_B_ID = "stop_area:SNC:FR::LMU:ab071640-cb0a-11e8-8bfa-f784c1c7c611:"
 
 DEFAULT_STATION_C_NAME = "Ermont - Eaubonne"
-DEFAULT_STATION_C_ID = "stop_area:SNCF:87276055"
+DEFAULT_STATION_C_ID = "stop_area:IDFM:65669"
+
+LEGACY_STATION_ID_MIGRATION = {
+    "stop_area:SNCF:87276022": DEFAULT_STATION_A_ID,
+    "stop_area:SNCF:87271007": DEFAULT_STATION_B_ID,
+    "stop_area:SNCF:87276055": DEFAULT_STATION_C_ID,
+    "stop_area:SNCF:87276156": DEFAULT_STATION_C_ID,
+}
 
 # Base API URLs
 SNCF_API_URL = "https://api.sncf.com/v1"
@@ -52,9 +59,9 @@ PRIM_API_URL = "https://prim.iledefrance-mobilites.fr/marketplace"
 
 # Pre-mapped Stop Area IDs for popular stations (Fast resolution)
 KNOWN_STATION_IDS = {
-    "Enghien-les-Bains": "stop_area:SNCF:87276022",
-    "Paris Nord": "stop_area:SNCF:87271007",
-    "Ermont - Eaubonne": "stop_area:SNCF:87276055",
+    "Enghien-les-Bains": DEFAULT_STATION_A_ID,
+    "Paris Nord": DEFAULT_STATION_B_ID,
+    "Ermont - Eaubonne": DEFAULT_STATION_C_ID,
     "Saint-Denis": "stop_area:SNCF:87271015",
     "Épinay - Villetaneuse": "stop_area:SNCF:87276006",
     "Deuil - Montmagny": "stop_area:SNCF:87276014",

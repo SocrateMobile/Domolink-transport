@@ -31,6 +31,7 @@ from .const import (
     DEFAULT_STATION_C_ID,
     DEFAULT_STATION_C_NAME,
     DOMAIN,
+    LEGACY_STATION_ID_MIGRATION,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,18 +61,18 @@ class DomolinkTransportCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         self.api = DomolinkTransportApiClient(session, api_key, prim_key)
 
-        # Gares
+        # Gares (avec migration automatique des anciens stop_area:SNCF:... obsolètes)
         self.station_a_name = entry.options.get(CONF_STATION_A, entry.data.get(CONF_STATION_A, DEFAULT_STATION_A_NAME))
-        self.station_a_id = entry.options.get(CONF_STATION_A_ID, entry.data.get(CONF_STATION_A_ID, DEFAULT_STATION_A_ID))
+        st_a_id = entry.options.get(CONF_STATION_A_ID, entry.data.get(CONF_STATION_A_ID, DEFAULT_STATION_A_ID))
+        self.station_a_id = LEGACY_STATION_ID_MIGRATION.get(st_a_id, st_a_id)
 
         self.station_b_name = entry.options.get(CONF_STATION_B, entry.data.get(CONF_STATION_B, DEFAULT_STATION_B_NAME))
-        self.station_b_id = entry.options.get(CONF_STATION_B_ID, entry.data.get(CONF_STATION_B_ID, DEFAULT_STATION_B_ID))
+        st_b_id = entry.options.get(CONF_STATION_B_ID, entry.data.get(CONF_STATION_B_ID, DEFAULT_STATION_B_ID))
+        self.station_b_id = LEGACY_STATION_ID_MIGRATION.get(st_b_id, st_b_id)
 
         self.station_c_name = entry.options.get(CONF_STATION_C, entry.data.get(CONF_STATION_C, DEFAULT_STATION_C_NAME))
         st_c_id = entry.options.get(CONF_STATION_C_ID, entry.data.get(CONF_STATION_C_ID, DEFAULT_STATION_C_ID))
-        if st_c_id == "stop_area:SNCF:87276156":
-            st_c_id = DEFAULT_STATION_C_ID
-        self.station_c_id = st_c_id
+        self.station_c_id = LEGACY_STATION_ID_MIGRATION.get(st_c_id, st_c_id)
 
         self.create_legacy_entities = entry.options.get(
             CONF_CREATE_LEGACY_ENTITIES,

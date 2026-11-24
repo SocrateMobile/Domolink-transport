@@ -18,8 +18,11 @@ TZ_PARIS = zoneinfo.ZoneInfo("Europe/Paris")
 
 SNCF_TO_PRIM_STOP_AREAS = {
     "87271007": "STIF:StopArea:SP:462394:",  # Paris Nord
+    "stop_area:SNC:FR::LMU:ab071640-cb0a-11e8-8bfa-f784c1c7c611:": "STIF:StopArea:SP:462394:",
     "87276022": "STIF:StopArea:SP:43075:",   # Enghien-les-Bains
+    "65485": "STIF:StopArea:SP:43075:",
     "87276055": "STIF:StopArea:SP:47898:",   # Ermont - Eaubonne
+    "65669": "STIF:StopArea:SP:47898:",
     "87276006": "STIF:StopArea:SP:43178:",   # Persan - Beaumont
     "87276139": "STIF:StopArea:SP:43168:",   # Pontoise
     "87276113": "STIF:StopArea:SP:43085:",   # Saint-Leu-la-Forêt
@@ -50,7 +53,7 @@ class DomolinkTransportApiClient:
             return {}
 
         uic = station_sncf_id.split(":")[-1] if ":" in station_sncf_id else station_sncf_id
-        monitoring_ref = SNCF_TO_PRIM_STOP_AREAS.get(uic)
+        monitoring_ref = SNCF_TO_PRIM_STOP_AREAS.get(station_sncf_id) or SNCF_TO_PRIM_STOP_AREAS.get(uic)
         if not monitoring_ref:
             return {}
 
